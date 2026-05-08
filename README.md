@@ -27,7 +27,7 @@ Os participantes devem buscar os dados históricos dos últimos 7 anos dos índi
 
 # Etapas desenhadas pelo grupo:
       1. Criar um modelo de Index Tracking (IT) do IBOV
-      // Isso inclui documentar as etapas no notebook, descrevendo as fontes de dados, os critérios de escolha e as variáveis selecionadas, além de tratar dados ausentes, outliers e realizar feature engineering. A análise exploratória deve revelar insights iniciais.
+      Isso inclui documentar as etapas no notebook, descrevendo as fontes de dados, os critérios de escolha e as variáveis selecionadas, além de tratar dados ausentes, outliers e realizar feature engineering. A análise exploratória deve revelar insights iniciais.
             1 Briefing_Entrega_TG1: 
                   1.2 coleta;
                         1.2.1 Buscar os dados históricos dos últimos 7 anos dos índices IBOV;
