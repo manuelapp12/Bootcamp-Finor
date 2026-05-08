@@ -53,7 +53,7 @@ Os participantes devem buscar os dados históricos dos últimos 7 anos dos índi
                         1.3.6 - Arthur
                               Padronizar tipos de dados (datas, textos, números)
                   1.4 (28/05) entrega e apresentação
-                        1.4.1 - Manuela
+                        1.4.1 - Manuela & Laura
                               Preparar uma apresentação de alta qualidade explicando as estratégias utilizadas para o pre-processamento, a análise exploratória da base de dados a seleção de modelos, as reamostragens e os resultados das previsões/inferências com modelos lineares. A apresentação será feita em sala com utilização de PPT e outros recursos visuais que o grupo achar melhor. Cada grupo terá 20 minutos.
                         1.4.2 Laura
                               Essa apresentação deverá ser enviada no link “Entrega Apresentação 1” no Moodle. Cada grupo deve subir o notebook no repositório do grupo no GitHub. O endereço do repositório do GitHub deverá ser informado na entrega da tarefa no Moodle.
