@@ -27,13 +27,22 @@ Os participantes devem buscar os dados históricos dos últimos 7 anos dos índi
 
 # Etapas desenhadas pelo grupo:
       1. Criar um modelo de Index Tracking (IT) do IBOV
-            1.1 Buscar os dados históricos dos últimos 7 anos dos índices IBOV;
-            1.2 Realizar: 
-                  1.2.1 coleta;
-                  1.2.2 limpeza;
-                  1.2.3 pré-processamento; e
-                  1.2.4 análise exploratória dos dados.  
-            Isso inclui documentar as etapas no notebook, descrevendo as fontes de dados, os critérios de escolha e as variáveis selecionadas, além de tratar dados ausentes, outliers e realizar feature engineering. A análise exploratória deve revelar insights iniciais.
+      // Isso inclui documentar as etapas no notebook, descrevendo as fontes de dados, os critérios de escolha e as variáveis selecionadas, além de tratar dados ausentes, outliers e realizar feature engineering. A análise exploratória deve revelar insights iniciais.
+            1 Realizar: 
+                  1.2 coleta;
+                        1.2.1 Buscar os dados históricos dos últimos 7 anos dos índices IBOV;
+                  1.3 limpeza;
+                        1.3.1 Carregar o dataset e verificar shape, dtypes e head
+                        1.3.2 Identificar e documentar o significado de cada coluna
+                        1.3.3 Verificar o cabeçalho e o delimitador do arquivo
+                  1.4 pré-processamento; e
+                        1.4.1 Analisar a % de valores ausentes por coluna
+                        1.4.2 Definir e aplicar a estratégia de tratamento de missing values
+                        1.4.3 Identificar e documentar os outliers encontrador
+                        1.4.4 Decidir o que fazer com cada outlier (manter, recmover ou transformar)
+                        1.4.5 Verificar e remover duplicatas
+                        1.4.6 Padronizar tipos de dados (datas, textos, números)
+                  1.5 análise exploratória dos dados.  
             
       2. Criar um modelo de Index Tracking (IT) do S&P100
             2.2 Buscar os dados históricos dos últimos 7 anos dos índices S&P100
