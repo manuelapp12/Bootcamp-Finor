@@ -16,12 +16,11 @@ Os participantes devem buscar os dados históricos dos últimos 7 anos dos índi
       IT no formato de problema de otimização pode ser incrementado com restrições de negócio.
 
 # Etapas:
-A implementação do modelo de otimização deve ser realizada em Python, podendo ser utilizadas API’s de Python de solvers como Gurobi ou de solvers open-source.
+A implementação do modelo de otimização deve ser realizada em Python, podendo ser utilizadas API’s de Python de solvers como Gurobi ou de solvers open-source:
       1. Importar os dados a partir de arquivos ou a partir de API’s de fontes de dados de ações
       2. Explorar os dados das ações e verificar se há dados faltantes para alguma delas para o período de análise
       3. Tratar informações se necessário, removendo valores discrepantes.
       4. Desenvolver o modelo de otimização.
       5. Resolver o problema de otimização.
-      6. Analisar os diferentes resultados do modelo, comparando a performance do índice com a carteira.
-        Definir um período para teste dentro da amostra e fora da amostra: construir ao menos 5 carteiras fora da amostra e avaliar sua performance.
+      6. Analisar os diferentes resultados do modelo, comparando a performance do índice com a carteira. Definir um período para teste dentro da amostra e fora da amostra: construir ao menos 5 carteiras fora da amostra e avaliar sua performance.
       7. Apresentar os resultados em um jupyter notebook.
