@@ -47,5 +47,5 @@ Os participantes devem buscar os dados históricos dos últimos 7 anos dos índi
                         1.5.2 Essa apresentação deverá ser enviada no link “Entrega Apresentação 1” no Moodle. Cada grupo deve subir o notebook no repositório do grupo no GitHub. O endereço do repositório do GitHub deverá ser informado na entrega da tarefa no Moodle.
                   
             
-      2. Criar um modelo de Index Tracking (IT) do S&P100
-            2.2 Buscar os dados históricos dos últimos 7 anos dos índices S&P100
+      ~~2. Criar um modelo de Index Tracking (IT) do S&P100~~
+            ~~2.2 Buscar os dados históricos dos últimos 7 anos dos índices S&P100~~
