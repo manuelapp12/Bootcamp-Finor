@@ -29,22 +29,34 @@ Os participantes devem buscar os dados históricos dos últimos 7 anos dos índi
       1. Criar um modelo de Index Tracking (IT) do IBOV
       Isso inclui documentar as etapas no notebook, descrevendo as fontes de dados, os critérios de escolha e as variáveis selecionadas, além de tratar dados ausentes, outliers e realizar feature engineering. A análise exploratória deve revelar insights iniciais.
             1 Briefing_Entrega_TG1: 
-                  1.2 coleta;
-                        1.2.1 Buscar os dados históricos dos últimos 7 anos dos índices IBOV;
-                  1.3 limpeza;
-                        1.3.1 Carregar o dataset e verificar shape, dtypes e head
-                        1.3.2 Identificar e documentar o significado de cada coluna
-                        1.3.3 Verificar o cabeçalho e o delimitador do arquivo
-                  1.4 pré-processamento e análise exploratória dos dados;
-                        1.4.1 Analisar a % de valores ausentes por coluna
-                        1.4.2 Definir e aplicar a estratégia de tratamento de missing values
-                        1.4.3 Identificar e documentar os outliers encontrador
-                        1.4.4 Decidir o que fazer com cada outlier (manter, recmover ou transformar)
-                        1.4.5 Verificar e remover duplicatas
-                        1.4.6 Padronizar tipos de dados (datas, textos, números)
-                  1.5 entrega e apresentação
-                        1.5.1 preparar uma apresentação de alta qualidade explicando as estratégias utilizadas para o pre-processamento, a análise exploratória da base de dados a seleção de modelos, as reamostragens e os resultados das previsões/inferências com modelos lineares. A apresentação será feita em sala com utilização de PPT e outros recursos visuais que o grupo achar melhor. Cada grupo terá 20 minutos.
-                        1.5.2 Essa apresentação deverá ser enviada no link “Entrega Apresentação 1” no Moodle. Cada grupo deve subir o notebook no repositório do grupo no GitHub. O endereço do repositório do GitHub deverá ser informado na entrega da tarefa no Moodle.
+                  1.1 coleta;
+                        1.1.1 - Arthur
+                              Buscar os dados históricos dos últimos 7 anos dos índices IBOV;
+                  1.2 limpeza;
+                        1.2.1 - Arthur
+                              Carregar o dataset e verificar shape, dtypes e head
+                        1.2.2 - Laura
+                              Identificar e documentar o significado de cada coluna
+                        1.2.3 - Arthur
+                              Verificar o cabeçalho e o delimitador do arquivo
+                  1.3 pré-processamento e análise exploratória dos dados;
+                        1.3.1 - Ígor
+                              Analisar a % de valores ausentes por coluna
+                        1.3.2 - Ígor
+                              Definir e aplicar a estratégia de tratamento de missing values
+                        1.3.3 - Rafael
+                              Identificar e documentar os outliers encontrador
+                        1.3.4 - Rafael
+                              Decidir o que fazer com cada outlier (manter, recmover ou transformar)
+                        1.3.5 - Arthur
+                              Verificar e remover duplicatas
+                        1.3.6 - Arthur
+                              Padronizar tipos de dados (datas, textos, números)
+                  1.4 (28/05) entrega e apresentação
+                        1.4.1 - Manuela
+                              Preparar uma apresentação de alta qualidade explicando as estratégias utilizadas para o pre-processamento, a análise exploratória da base de dados a seleção de modelos, as reamostragens e os resultados das previsões/inferências com modelos lineares. A apresentação será feita em sala com utilização de PPT e outros recursos visuais que o grupo achar melhor. Cada grupo terá 20 minutos.
+                        1.4.2 Laura
+                              Essa apresentação deverá ser enviada no link “Entrega Apresentação 1” no Moodle. Cada grupo deve subir o notebook no repositório do grupo no GitHub. O endereço do repositório do GitHub deverá ser informado na entrega da tarefa no Moodle.
                   
             
       ~~2. Criar um modelo de Index Tracking (IT) do S&P100~~
