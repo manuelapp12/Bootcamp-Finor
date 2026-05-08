@@ -27,6 +27,13 @@ Os participantes devem buscar os dados históricos dos últimos 7 anos dos índi
 
 # Etapas desenhadas pelo grupo:
       1. Criar um modelo de Index Tracking (IT) do IBOV
-            1.2 Buscar os dados históricos dos últimos 7 anos dos índices IBOV
+            1.1 Buscar os dados históricos dos últimos 7 anos dos índices IBOV;
+            1.2 Realizar: 
+                  1.2.1 coleta;
+                  1.2.2 limpeza;
+                  1.2.3 pré-processamento; e
+                  1.2.4 análise exploratória dos dados.  
+            Isso inclui documentar as etapas no notebook, descrevendo as fontes de dados, os critérios de escolha e as variáveis selecionadas, além de tratar dados ausentes, outliers e realizar feature engineering. A análise exploratória deve revelar insights iniciais.
+            
       2. Criar um modelo de Index Tracking (IT) do S&P100
             2.2 Buscar os dados históricos dos últimos 7 anos dos índices S&P100
