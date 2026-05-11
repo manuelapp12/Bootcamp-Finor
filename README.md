@@ -10,6 +10,47 @@ ações. Fundos de investimento passivo visam replicar o desempenho de um índic
 # Dados: 
 Os participantes devem buscar os dados históricos dos últimos 7 anos dos índices S&P 100 e IBOVESPA para serem utilizados como inputs. Os dados podem ser encontrados no Yahoo Finance e outros locais de interesse do grupo.
 
+# Configuração do Ambiente
+
+Este projeto é multiplataforma e pode ser rodado em **Linux, macOS ou Windows**. 
+
+Siga os passos abaixo para configurar seu ambiente de desenvolvimento:
+
+1. **Clonar o repositório:**
+   ```bash
+   git clone https://github.com/[seu-usuario]/Bootcamp-Finor.git
+   cd Bootcamp-Finor
+   ```
+
+2. **Criar um ambiente virtual (venv):**
+   *   No **Linux/macOS**:
+       ```bash
+       python3 -m venv .venv
+       ```
+   *   No **Windows**:
+       ```bash
+       python -m venv .venv
+       ```
+
+3. **Ativar o ambiente virtual:**
+   *   No **Linux/macOS**:
+       ```bash
+       source .venv/bin/activate
+       ```
+   *   No **Windows (PowerShell)**:
+       ```bash
+       .venv\Scripts\Activate.ps1
+       ```
+   *   No **Windows (Prompt de Comando)**:
+       ```bash
+       .venv\Scripts\activate
+       ```
+
+4. **Instalar as dependências:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
 # Index tracking (IT):
       IT consiste em uma estratégia de replicar um índice de mercado utilizando um número menor de ações.
       IT apresenta menores custos e, por ter menos ativos, fornece uma carteira de ações mais simples de ser gerida.
