@@ -10,6 +10,14 @@ ações. Fundos de investimento passivo visam replicar o desempenho de um índic
 # Dados: 
 Os participantes devem buscar os dados históricos dos últimos 7 anos dos índices S&P 100 e IBOVESPA para serem utilizados como inputs. Os dados podem ser encontrados no Yahoo Finance e outros locais de interesse do grupo.
 
+### Dicionário de Dados (Carteira IBOVESPA)
+A base de dados original da carteira teórica (`IBOVDia_11-05-26.csv`) contém as seguintes colunas, que foram identificadas e renomeadas no script `eda.py` (linha 17) para facilitar o processamento:
+* **ticker** (Original: `Código`): Código de negociação do ativo na B3 (ex: PETR4). No código, adicionamos dinamicamente o sufixo `.SA` para compatibilidade com o Yahoo Finance.
+* **name** (Original: `Ação`): Nome resumido da empresa emissora do ativo (ex: PETROBRAS).
+* **type** (Original: `Tipo`): Classe da ação (ex: ON = Ordinária, PN = Preferencial).
+* **qtd** (Original: `Qtde. Teórica`): Quantidade teórica de ações daquela empresa que compõem o índice.
+* **part** (Original: `Part. (%)`): Peso percentual daquele ativo na composição total do índice IBOVESPA.
+
 # Configuração do Ambiente
 
 Este projeto é multiplataforma e pode ser rodado em **Linux, macOS ou Windows**. 
