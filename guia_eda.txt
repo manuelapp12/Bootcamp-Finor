@@ -1,0 +1,1407 @@
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+FINOR × BOOTCAMP DATA SCIENCE 2026
+
+Guia de Dados & EDA
+
+Index Tracking: S&P100 e IBOVESPA
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+1. Contexto: O Que São os Dados que Vocês Vão Trabalhar?............................................. 4
+1.1 O Que é um Índice de Ações?..................................................................................................................... 4
+1.2 O Que é Capitalização de Mercado e Por Que Importa?......................................................... 4
+1.3 O Que é Index Tracking e Por Que os Dados Importam?........................................................5
+2. Entendendo os Dados: O Que Cada Coluna Significa?.....................................................5
+2.1 As Colunas do Yahoo Finance..................................................................................................................... 5
+2.2 Preço vs. Retorno,Uma Distinção Fundamental........................................................................... 6
+2.3 Por Que Trabalhar com Retornos e Não com Preços?..............................................................7
+2.4 O Que São os Dados do Índice?............................................................................................................... 7
+3. Coleta dos Dados: Passo a Passo............................................................................................. 8
+3.1 De Onde Tirar a Lista de Ações...................................................................................................................8
+3.2 Código Completo,Download dos Dados............................................................................................ 8
+3.3 Calculando os Retornos................................................................................................................................10
+4. EDA - Parte 1: Qualidade dos Dados...................................................................................... 11
+4.1 Análise de Dados Faltantes..........................................................................................................................11
+4.2 Como Tratar os Dados Faltantes............................................................................................................ 12
+4.3 Identificação de Outliers nos Retornos............................................................................................. 13
+5. EDA - Parte 2: Explorando os Retornos das Ações...........................................................14
+5.1 Performance Normalizada,O Gráfico Mais Importante........................................................... 14
+5.2 Estatísticas Descritivas dos Retornos.................................................................................................. 15
+5.3 Retorno por Período,Identificando Crises........................................................................................ 15
+5.4 Correlação com o Índice,A Análise Central do Projeto............................................................16
+6. EDA - Parte 3: Correlação Entre Ações e Análise por Setor.......................................... 18
+6.1 Matriz de Correlação Entre Ações.......................................................................................................... 18
+6.2 Análise por Setor da Economia...............................................................................................................18
+7. EDA - Parte 4: Volatilidade e Períodos de Crise............................................................... 20
+7.1 Linha do Tempo dos Principais Eventos........................................................................................... 20
+7.2 Volatilidade Móvel,Como o Risco Muda ao Longo do Tempo........................................... 20
+7.3 Comparativo S&P100 vs. IBOVESPA...................................................................................................... 21
+8. Prompts de IA: Para Aprofundar o Entendimento dos Dados.................................... 22
+9. Checklist: O que Apresentar................................................................................................... 24
+9.1 O que os Professores/Avaliadores Querem Ver............................................................................24
+9.2 Checklist de Entregas Técnicas..............................................................................................................24
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+1. Contexto: O Que São os Dados que Vocês Vão
+Trabalhar?
+Antes de abrir qualquer planilha ou rodar qualquer código, o grupo precisa responder
+uma pergunta fundamental: o que esses dados representam no mundo real? Em
+finanças, entender o dado é tão importante quanto processá-lo.
+
+1.1 O Que é um Índice de Ações?
+Um índice de ações é um número que resume o desempenho de um conjunto de
+empresas em uma bolsa de valores. Ele funciona como um termômetro do mercado:
+se o índice sobe, o mercado está bem; se cai, o mercado está mal.
+Índice
+
+Bolsa
+
+O que mede
+
+Composto por
+
+S&P 100
+
+NYSE
+/
+Nasdaq (EUA)
+
+Desempenho das 100
+maiores
+empresas
+americanas
+por
+capitalização de mercado
+
+Apple,
+Microsoft,
+Amazon,
+Google,
+Berkshire, etc.
+
+IBOVESPA
+(IBOV)
+
+B3 (Brasil)
+
+Desempenho das ações
+mais negociadas da bolsa
+brasileira
+
+Petrobras, Vale, Itaú,
+Bradesco, WEG, etc.
+
+💡 Por que índices existem?
+
+Imagine que você quer saber se 'o mercado americano foi bem hoje'. Seria
+impossível olhar para as 5.000 ações negociadas na NYSE individualmente. O
+S&P100 resolve isso: ele pega as 100 maiores empresas, pondera pelo tamanho
+de cada uma (capitalização de mercado) e gera um único número que
+representa o conjunto.
+É como uma média ponderada do desempenho das maiores empresas do país.
+
+1.2 O Que é Capitalização de Mercado e Por Que Importa?
+A capitalização de mercado de uma empresa é simplesmente: Preço da ação ×
+Número de ações em circulação. Ela representa o valor total que o mercado atribui à
+empresa.
+
+Empresa (exemplo)
+
+Preço da ação
+
+Ações
+circulação
+
+Apple (AAPL)
+
+~US$ 200
+
+~15,4 bilhões
+
+~US$ 3,08 trilhões
+
+Petrobras (PETR4)
+
+~R$ 38
+
+~13 bilhões
+
+~R$ 494 bilhões
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+em
+
+Capitalização
+mercado
+
+de
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+No S&P100 e no IBOVESPA, o peso de cada ação no índice é proporcional à sua
+capitalização de mercado. Isso significa que a Apple tem muito mais influência sobre
+o S&P100 do que uma empresa pequena. Quando a Apple sobe 1%, o índice sente
+mais do que quando uma empresa menor sobe 1%.
+
+1.3 O Que é Index Tracking e Por Que os Dados Importam?
+O projeto pede que vocês repliquem o comportamento do índice usando menos
+ações. Para isso, precisam entender profundamente o que os dados de cada ação
+representam,porque serão eles que o modelo vai usar para decidir quais ações incluir
+e quanto alocar.
+
+🎯 Pergunta central desta semana
+
+Com os dados históricos das ações do S&P100 e do IBOV, o grupo deve ser
+capaz de
+responder na apresentação:
+→ Quais ações têm comportamento mais parecido com o índice?
+→ Quais ações 'andam juntas' (alta correlação)?
+→ Quais dados estão faltando ou com problemas?
+→ Quais períodos foram de crise e como os dados refletem isso?
+→ O que os dados nos dizem sobre a dificuldade de replicar cada índice?
+
+2. Entendendo os Dados: O Que Cada Coluna
+Significa?
+Quando vocês baixarem os dados do Yahoo Finance, receberão uma tabela com
+algumas colunas para cada ação. É fundamental entender o que cada uma representa
+antes de usar qualquer dado.
+
+2.1 As Colunas do Yahoo Finance
+Coluna
+
+Nome completo
+
+O que representa
+
+Qual usar?
+
+Open
+
+Preço
+abertura
+
+Preço da primeira negociação
+do dia
+
+Raramente
+
+High
+
+Preço máximo
+
+Maior preço negociado no dia
+
+Raramente
+
+Low
+
+Preço mínimo
+
+Menor preço negociado no
+dia
+
+Raramente
+
+Close
+
+Preço
+fechamento
+
+Último preço negociado no
+dia,preço 'oficial' do dia
+
+Sim, mas...
+
+de
+
+de
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+Coluna
+
+Nome completo
+
+O que representa
+
+Adj Close
+
+Fechamento
+ajustado
+
+Close
+corrigido
+dividendos,
+splits
+bonificações
+
+Volume
+
+Volume
+negociado
+
+Quantidade
+de
+negociadas no dia
+
+Qual usar?
+
+por
+e
+ações
+
+✅ USE ESTE
+Para análise
+liquidez
+
+de
+
+⚠️ Por que usar Adj Close e NÃO Close?
+
+Imagine uma ação que custa R$ 100. A empresa decide fazer um split
+(desdobramento) 2 por 1: cada ação vira 2 ações e o preço cai para R$ 50. O
+investidor não perdeu nada,ele tem o dobro de ações pela metade do preço.
+Mas se você olhar só o preço Close, verá uma 'queda' de 50% que nunca
+aconteceu.
+O Adj Close corrige isso automaticamente, ajustando todos os preços históricos
+para refletir esses eventos. Use sempre o Adj Close para análise histórica.
+O mesmo vale para dividendos: quando uma empresa paga dividendos, o preço
+da ação cai pelo valor do dividendo. O Adj Close já incorpora essa correção.
+
+2.2 Preço vs. Retorno,Uma Distinção Fundamental
+Em finanças, analistas raramente trabalham diretamente com o preço das ações. Eles
+trabalham com os retornos,a variação percentual de um período para o outro.
+Entender essa diferença é crucial para o projeto.
+
+🔢 Retorno Simples vs. Retorno Logarítmico
+
+Retorno simples: r_t = (P_t − P_{t−1}) / P_{t−1} = variação percentual
+→ Exemplo: ação sai de R$100 para R$110 → retorno = 10%
+→ Intuitivo, fácil de comunicar
+Retorno logarítmico: r_t = ln(P_t / P_{t−1})
+→ Exemplo: ação sai de R$100 para R$110 → retorno = ln(1,10) ≈ 9,53%
+→ Preferido em finanças quantitativas porque:
+• Se soma ao longo do tempo (aditivo)
+• Aproximadamente simétrico (facilita estatística)
+• Mais robusto em períodos de alta volatilidade
+Para este projeto, qualquer um dos dois funciona,escolham um e mantenham
+consistência em todo o código. Documentem a escolha no notebook.
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+2.3 Por Que Trabalhar com Retornos e Não com Preços?
+•​
+•​
+
+•​
+•​
+
+Comparabilidade: uma ação a R$ 5 e outra a R$ 500 não são diretamente
+comparáveis em preço, mas são comparáveis em retorno.
+Estacionariedade: séries de preços tendem a crescer ao longo do tempo (não
+estacionárias), enquanto retornos oscilam em torno de uma média (mais
+estacionários,melhor para modelagem).
+Interpretabilidade: um retorno de 2% significa a mesma coisa para qualquer
+ação, independente do preço absoluto.
+Normalização natural: retornos já são uma forma de normalização,não
+precisamos escalar os dados antes de comparar ações.
+
+2.4 O Que São os Dados do Índice?
+Além dos dados de cada ação individual, vocês precisarão dos dados do próprio índice
+(S&P100 e IBOVESPA). Esses dados têm uma diferença importante:
+
+Dado
+
+Ticker no Yahoo
+Finance
+
+S&P 100 (índice)
+
+^OEX
+
+Valor do índice S&P100,número calculado
+pela S&P com base nas 100 ações
+ponderadas
+
+IBOVESPA (índice)
+
+^BVSP
+
+Pontuação do IBOV,número calculado
+pela B3 com base nas ações mais líquidas
+ponderadas
+
+Apple
+individual)
+
+(ação
+
+AAPL
+
+Preço da ação da Apple na Nasdaq
+
+Petrobras
+individual)
+
+(ação
+
+PETR4.SA
+
+Preço da ação da Petrobras na B3 (sufixo
+.SA obrigatório no Yahoo Finance)
+
+O que representa
+
+📌 Atenção ao sufixo .SA para ações brasileiras
+
+No Yahoo Finance, todas as ações brasileiras precisam do sufixo .SA para serem
+reconhecidas. Exemplos:
+PETR4 → PETR4.SA
+VALE3 → VALE3.SA
+ITUB4 → ITUB4.SA
+BBDC4 → BBDC4.SA
+O índice IBOVESPA (^BVSP) NÃO leva o sufixo .SA,ele é identificado pelo ^. O
+índice S&P100 é identificado por ^OEX.
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+3. Coleta dos Dados: Passo a Passo
+O Yahoo Finance disponibiliza dados históricos gratuitos de praticamente todas as
+ações do mundo. A biblioteca yfinance do Python é a forma mais eficiente de
+acessá-los.
+
+3.1 De Onde Tirar a Lista de Ações
+Índice
+
+Onde buscar a lista de ações
+
+O que copiar
+
+S&P 100
+
+Wikipedia: 'S&P 100' → tabela
+'Components'
+
+Coluna 'Symbol',são os tickers
+como AAPL, MSFT, etc.
+
+IBOVESPA
+
+B3: b3.com.br → Índices
+IBOVESPA → Composição
+
+→
+
+Coluna 'Código',são tickers
+como
+PETR4,
+VALE3.
+Adicionar .SA
+
+Alternativa
+IBOV
+
+statusinvest.com.br → Índices →
+IBOV
+
+Lista completa com pesos
+atuais de cada ação
+
+💡 Dica,Extrair a lista da Wikipedia automaticamente
+
+Ao invés de copiar manualmente, o pandas consegue ler tabelas HTML
+diretamente:
+import pandas as pd
+url = 'https://en.wikipedia.org/wiki/S%26P_100'
+tabelas = pd.read_html(url)
+sp100 = tabelas[2] # geralmente é a terceira tabela
+tickers = sp100['Symbol'].tolist()
+Teste e ajuste o índice [2] conforme necessário,a Wikipedia muda o layout às
+vezes.
+
+3.2 Código Completo,Download dos Dados
+import yfinance as yf
+import pandas as pd
+import numpy as np
+import warnings
+warnings.filterwarnings('ignore')
+# ══════════════════════════════════════════════════════
+# PASSO 1: Definir a lista de tickers
+# ══════════════════════════════════════════════════════
+# S&P 100,lista parcial de exemplo (adicione todos os 100)
+tickers_sp100 = [
+'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'GOOG', 'META', 'NVDA',
+'TSLA', 'BRK-B', 'JPM', 'JNJ', 'V', 'PG', 'UNH', 'HD',
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+'MA', 'DIS', 'BAC', 'ABBV', 'XOM', 'CVX', 'LLY', 'AVGO',
+# ... adicionar todos,buscar lista atualizada na Wikipedia
+]
+# IBOVESPA,lista parcial de exemplo (adicione todos)
+tickers_ibov = [
+'PETR4.SA', 'VALE3.SA', 'ITUB4.SA', 'BBDC4.SA', 'ABEV3.SA',
+'WEGE3.SA', 'RENT3.SA', 'MGLU3.SA', 'SUZB3.SA', 'BBAS3.SA',
+'B3SA3.SA', 'BPAC11.SA', 'RDOR3.SA', 'GGBR4.SA', 'CSNA3.SA',
+# ... adicionar todos,buscar lista atualizada na B3
+]
+# Tickers dos índices
+ticker_idx_sp100 = '^OEX'
+ticker_idx_ibov = '^BVSP'
+# ══════════════════════════════════════════════════════
+# PASSO 2: Definir o período (7 anos conforme briefing)
+# ══════════════════════════════════════════════════════
+inicio = '2018-01-01'
+fim = '2025-05-01'
+# ══════════════════════════════════════════════════════
+# PASSO 3: Baixar os dados
+# ══════════════════════════════════════════════════════
+print('
+Baixando S&P100...')
+dados_sp100 = yf.download(tickers_sp100, start=inicio, end=fim,
+auto_adjust=True, progress=False)['Close']
+indice_sp100 = yf.download(ticker_idx_sp100, start=inicio, end=fim,
+auto_adjust=True, progress=False)['Close']
+
+⬇️
+⬇️
+
+print('
+Baixando IBOVESPA...')
+dados_ibov = yf.download(tickers_ibov, start=inicio, end=fim,
+auto_adjust=True, progress=False)['Close']
+indice_ibov = yf.download(ticker_idx_ibov, start=inicio, end=fim,
+auto_adjust=True, progress=False)['Close']
+# ══════════════════════════════════════════════════════
+# PASSO 4: Salvar localmente (evita baixar toda vez!)
+# ══════════════════════════════════════════════════════
+dados_sp100.to_csv('sp100_precos.csv')
+dados_ibov.to_csv('ibov_precos.csv')
+indice_sp100.to_csv('sp100_indice.csv')
+indice_ibov.to_csv('ibov_indice.csv')
+# ══════════════════════════════════════════════════════
+# PASSO 5: Verificação rápida
+# ══════════════════════════════════════════════════════
+print(f'\n
+S&P100: {dados_sp100.shape[1]} ações × {dados_sp100.shape[0]} pregões')
+print(f'
+IBOV: {dados_ibov.shape[1]} ações × {dados_ibov.shape[0]} pregões')
+print(f'\nPeríodo S&P100: {dados_sp100.index[0].date()} → {dados_sp100.index[-1].date()}')
+print(f'Período IBOV: {dados_ibov.index[0].date()} → {dados_ibov.index[-1].date()}')
+print('\nPrimeiras linhas S&P100:')
+print(dados_sp100.head(3))
+
+✅✅
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+3.3 Calculando os Retornos
+# ══════════════════════════════════════════════════════
+# Calcular retornos,FAÇA ISSO LOGO APÓS O DOWNLOAD
+# ══════════════════════════════════════════════════════
+# Retorno logarítmico diário (recomendado para finanças quantitativas)
+ret_sp100 = np.log(dados_sp100 / dados_sp100.shift(1)).dropna()
+ret_ibov = np.log(dados_ibov / dados_ibov.shift(1)).dropna()
+ret_idx_sp = np.log(indice_sp100 / indice_sp100.shift(1)).dropna()
+ret_idx_ib = np.log(indice_ibov / indice_ibov.shift(1)).dropna()
+# Alternativa: retorno simples percentual
+# ret_sp100 = dados_sp100.pct_change().dropna()
+print('Formato dos retornos S&P100:', ret_sp100.shape)
+print('Formato dos retornos IBOV: ', ret_ibov.shape)
+print(f'\nRetorno médio diário do S&P100: {ret_idx_sp.mean():.4%}')
+print(f'Retorno médio diário do IBOV: {ret_idx_ib.mean():.4%}')
+print(f'\nVolatilidade diária S&P100: {ret_idx_sp.std():.4%}')
+print(f'Volatilidade diária IBOV: {ret_idx_ib.std():.4%}')
+# Salvar retornos
+ret_sp100.to_csv('sp100_retornos.csv')
+ret_ibov.to_csv('ibov_retornos.csv')
+
+⚠️ Atenção,EUA e Brasil têm calendários diferentes
+
+Os mercados americano e brasileiro têm feriados diferentes. Isso significa que o
+S&P100 pode ter dados para um dia em que o IBOV não tem (e vice-versa).
+Quando vocês forem comparar os dois índices, precisarão alinhar as datas:
+datas_comuns = ret_idx_sp.index.intersection(ret_idx_ib.index)
+ret_sp_alinhado = ret_idx_sp.loc[datas_comuns]
+ret_ib_alinhado = ret_idx_ib.loc[datas_comuns]
+Para a análise de cada índice separadamente, use o calendário de cada um sem
+mistura.
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+4. EDA - Parte 1: Qualidade dos Dados
+Antes de qualquer análise financeira, precisamos garantir que os dados estão
+completos, consistentes e confiáveis. Esta etapa é frequentemente ignorada por
+iniciantes,e é onde os projetos falham.
+
+4.1 Análise de Dados Faltantes
+Ações podem ter dados faltantes por vários motivos: suspensão de negociação, IPO
+recente (empresa que entrou na bolsa depois de 2018), erros do provedor de dados,
+etc.
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+# ══════════════════════════════════════════════════════
+# DIAGNÓSTICO DE DADOS FALTANTES,S&P100
+# ══════════════════════════════════════════════════════
+# Contagem e percentual de nulos por ação
+nulos_sp = dados_sp100.isnull().sum()
+pct_nulos = (nulos_sp / len(dados_sp100) * 100).round(2)
+print('=== DADOS FALTANTES,S&P100 ===')
+print(f'Total de ações: {dados_sp100.shape[1]}')
+print(f'Ações sem nenhum dado faltante: {(pct_nulos == 0).sum()}')
+print(f'Ações com algum dado faltante: {(pct_nulos > 0).sum()}')
+print(f'\nAções com mais de 5% de dados faltantes:')
+print(pct_nulos[pct_nulos > 5].sort_values(ascending=False))
+# Visualização,mapa de calor de dados faltantes
+# (usando missingno,pip install missingno)
+try:
+import missingno as msno
+fig, ax = plt.subplots(figsize=(14, 5))
+msno.bar(dados_sp100, ax=ax, color='steelblue', fontsize=9)
+ax.set_title('Completude de Dados por Ação,S&P100', fontweight='bold')
+plt.tight_layout()
+plt.savefig('missing_sp100.png', dpi=150)
+plt.show()
+except ImportError:
+# Alternativa sem missingno
+completude = (1 - pct_nulos/100).sort_values()
+plt.figure(figsize=(12, 6))
+completude.plot(kind='barh', color='steelblue')
+plt.axvline(0.95, color='red', linestyle='--', label='95% de completude')
+plt.title('Completude de Dados por Ação,S&P100')
+plt.xlabel('Proporção de dados presentes (0 a 1)')
+plt.legend()
+plt.tight_layout()
+plt.savefig('completude_sp100.png', dpi=150)
+plt.show()
+# Repetir para IBOV
+nulos_ib = dados_ibov.isnull().sum()
+pct_ib = (nulos_ib / len(dados_ibov) * 100).round(2)
+print('\n=== DADOS FALTANTES,IBOV ===')
+print(pct_ib[pct_ib > 5].sort_values(ascending=False))
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+4.2 Como Tratar os Dados Faltantes
+Situação
+
+Causa provável
+
+O que fazer
+
+Ação com 0% de
+dados faltantes
+
+Ação
+negociada
+no
+período
+todo
+sem
+problemas
+
+Ação com 1–5% de
+dados faltantes
+
+Feriados
+locais,
+suspensões temporárias
+
+Preencher com o último valor
+disponível (forward fill)
+
+Ação com 5–20% de
+dados faltantes
+
+Ação listada depois de
+2018 (IPO recente)
+
+Avaliar se incluir,pode distorcer
+análise de 7 anos
+
+Ação com >20% de
+dados faltantes
+
+IPO
+muito
+fusão, falência
+
+✅ Usar normalmente
+
+❌
+Remover do dataset,histórico
+insuficiente
+Ação com todos os Ticker errado ou não ❌ Remover,verificar se o ticker
+dados faltantes
+disponível
+está correto
+recente,
+
+# Estratégia de tratamento de missing values
+# Passo 1: Remover ações com mais de 20% de dados faltantes
+limite_remocao = 20
+acoes_validas_sp = pct_nulos[pct_nulos <= limite_remocao].index
+acoes_validas_ib = pct_ib[pct_ib <= limite_remocao].index
+dados_sp100_clean = dados_sp100[acoes_validas_sp].copy()
+dados_ibov_clean = dados_ibov[acoes_validas_ib].copy()
+print(f'S&P100: {dados_sp100.shape[1]} → {dados_sp100_clean.shape[1]} ações válidas')
+print(f'IBOV: {dados_ibov.shape[1]} → {dados_ibov_clean.shape[1]} ações válidas')
+# Passo 2: Preencher dados faltantes restantes com forward fill
+dados_sp100_clean = dados_sp100_clean.ffill()
+dados_ibov_clean = dados_ibov_clean.ffill()
+# Passo 3: Verificar se ainda há nulos (linhas iniciais podem ter NaN)
+dados_sp100_clean = dados_sp100_clean.dropna(how='all')
+dados_ibov_clean = dados_ibov_clean.dropna(how='all')
+# Recalcular retornos com dados limpos
+ret_sp100_clean = np.log(dados_sp100_clean / dados_sp100_clean.shift(1)).dropna()
+ret_ibov_clean = np.log(dados_ibov_clean / dados_ibov_clean.shift(1)).dropna()
+print(f'\nRetornos finais,S&P100: {ret_sp100_clean.shape}')
+print(f'Retornos finais,IBOV: {ret_ibov_clean.shape}')
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+4.3 Identificação de Outliers nos Retornos
+Retornos diários extremos (acima de ±15% em um único dia) são raros em ações
+normais e geralmente indicam eventos corporativos (splits, dividendos
+extraordinários) ou erros de dados.
+
+from scipy import stats
+# Detectar retornos extremos por ação
+limite_outlier = 0.15 # ±15% em um dia,ajuste conforme necessário
+outliers_sp = (ret_sp100_clean.abs() > limite_outlier).sum()
+print('Ações com retornos diários > 15% (S&P100):')
+print(outliers_sp[outliers_sp > 0].sort_values(ascending=False).head(15))
+# Investigar uma ação específica suspeita
+acao_suspeita = 'TSLA' # exemplo
+if acao_suspeita in ret_sp100_clean.columns:
+retornos_acao = ret_sp100_clean[acao_suspeita]
+dias_extremos = retornos_acao[retornos_acao.abs() > limite_outlier]
+print(f'\nDias com retorno extremo,{acao_suspeita}:')
+print(dias_extremos.sort_values(key=abs, ascending=False))
+# Gráfico de distribuição de retornos vs. curva normal
+plt.figure(figsize=(12, 5))
+# Retornos do índice S&P100
+plt.subplot(1, 2, 1)
+sns.histplot(ret_idx_sp, bins=60, kde=True, color='navy', label='Distribuição real')
+# Adicionar curva normal teórica
+mu, sigma = ret_idx_sp.mean(), ret_idx_sp.std()
+x = np.linspace(ret_idx_sp.min(), ret_idx_sp.max(), 100)
+plt.plot(x, stats.norm.pdf(x, mu, sigma) * len(ret_idx_sp) * (ret_idx_sp.max()-ret_idx_sp.min())/60,
+'r--', lw=2, label='Normal teórica')
+plt.title('Distribuição dos Retornos,S&P100')
+plt.xlabel('Retorno Diário')
+plt.legend()
+plt.subplot(1, 2, 2)
+sns.histplot(ret_idx_ib, bins=60, kde=True, color='green', label='Distribuição real')
+mu2, sigma2 = ret_idx_ib.mean(), ret_idx_ib.std()
+x2 = np.linspace(ret_idx_ib.min(), ret_idx_ib.max(), 100)
+plt.plot(x2, stats.norm.pdf(x2, mu2, sigma2) * len(ret_idx_ib) * (ret_idx_ib.max()-ret_idx_ib.min())/60,
+'r--', lw=2, label='Normal teórica')
+plt.title('Distribuição dos Retornos,IBOVESPA')
+plt.xlabel('Retorno Diário')
+plt.legend()
+plt.tight_layout()
+plt.savefig('distribuicao_retornos.png', dpi=150)
+plt.show()
+# O que observar: as caudas são mais pesadas que a normal? (fat tails = sim!)
+print(f'\nCurtose S&P100: {ret_idx_sp.kurtosis():.2f} (normal = 0)')
+print(f'Curtose IBOV: {ret_idx_ib.kurtosis():.2f} (normal = 0)')
+print('Valores positivos = caudas gordas (fat tails),comum em finanças')
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+5. EDA - Parte 2: Explorando os Retornos das
+Ações
+Com os dados limpos, chegou a hora de entender o comportamento de cada ação.
+Esta seção concentra as análises mais relevantes para a apresentação da semana.
+
+5.1 Performance Normalizada,O Gráfico Mais Importante
+Normalizar os preços na base 100 permite comparar visualmente o desempenho de
+ações com preços muito diferentes ao longo do tempo. Este é o gráfico que conta a
+história dos últimos 7 anos.
+
+# Performance normalizada: todos começam em 100 no início do período
+precos_norm_sp = (dados_sp100_clean / dados_sp100_clean.iloc[0] * 100)
+indice_norm_sp = (indice_sp100 / indice_sp100.iloc[0] * 100)
+plt.figure(figsize=(14, 8))
+# Ações individuais em cinza claro (fundo)
+for col in precos_norm_sp.columns:
+plt.plot(precos_norm_sp.index, precos_norm_sp[col],
+color='lightgray', linewidth=0.5, alpha=0.4)
+# Destacar algumas ações relevantes
+destaques = ['AAPL', 'MSFT', 'NVDA', 'TSLA']
+cores_dest = ['blue', 'green', 'orange', 'purple']
+for acao, cor in zip(destaques, cores_dest):
+if acao in precos_norm_sp.columns:
+plt.plot(precos_norm_sp.index, precos_norm_sp[acao],
+color=cor, linewidth=1.5, label=acao, alpha=0.8)
+# Índice em destaque total
+plt.plot(indice_norm_sp.index, indice_norm_sp,
+color='navy', linewidth=3, label='S&P100 (Índice)')
+# Marcar eventos importantes
+plt.axvline('2020-03-23', color='red', linestyle=':', linewidth=1.5, alpha=0.7)
+plt.text('2020-03-25', precos_norm_sp.max().max()*0.85, 'Mínimo\nCOVID',
+color='red', fontsize=9)
+plt.axvline('2022-01-03', color='darkred', linestyle=':', linewidth=1.5, alpha=0.7)
+plt.text('2022-02-01', precos_norm_sp.max().max()*0.70, 'Início\nCrise Juros',
+color='darkred', fontsize=9)
+plt.title('Performance Normalizada,S&P100 (Base 100 em Jan/2018)',
+fontsize=14, fontweight='bold')
+plt.ylabel('Valor (Base 100)', fontsize=12)
+plt.xlabel('Data', fontsize=12)
+plt.legend(fontsize=10, loc='upper left')
+plt.grid(True, alpha=0.2)
+plt.tight_layout()
+plt.savefig('performance_normalizada_sp100.png', dpi=150)
+plt.show()
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+5.2 Estatísticas Descritivas dos Retornos
+As estatísticas descritivas dos retornos revelam o perfil de risco e retorno de cada
+ação,informação fundamental para entender o que o modelo de otimização terá
+disponível.
+
+# Estatísticas completas dos retornos,por ação
+stats = pd.DataFrame({
+'Retorno médio diário (%)': ret_sp100_clean.mean() * 100,
+'Retorno médio anualizado (%)': ret_sp100_clean.mean() * 252 * 100,
+'Volatilidade diária (%)': ret_sp100_clean.std() * 100,
+'Volatilidade anualizada (%)': ret_sp100_clean.std() * np.sqrt(252) * 100,
+'Sharpe aprox. anualizado': (
+ret_sp100_clean.mean() / ret_sp100_clean.std() * np.sqrt(252)),
+'Retorno mínimo diário (%)': ret_sp100_clean.min() * 100,
+'Retorno máximo diário (%)': ret_sp100_clean.max() * 100,
+'Assimetria (skewness)': ret_sp100_clean.skew(),
+'Curtose (kurtosis)': ret_sp100_clean.kurtosis(),
+'Dias negociados': ret_sp100_clean.count(),
+}).round(4)
+# Top 10 maior retorno médio anualizado
+print('TOP 10,Maior Retorno Anualizado (S&P100):')
+print(stats['Retorno médio anualizado (%)'].sort_values(ascending=False).head(10))
+# Top 10 menor volatilidade (mais estáveis)
+print('\nTOP 10,Menor Volatilidade Anualizada (S&P100):')
+print(stats['Volatilidade anualizada (%)'].sort_values().head(10))
+# Top 10 melhor Sharpe (melhor retorno ajustado por risco)
+print('\nTOP 10,Melhor Sharpe Aproximado (S&P100):')
+print(stats['Sharpe aprox. anualizado'].sort_values(ascending=False).head(10))
+# Gráfico risco vs. retorno (Fronteira de dispersão)
+plt.figure(figsize=(12, 8))
+plt.scatter(stats['Volatilidade anualizada (%)'],
+stats['Retorno médio anualizado (%)'],
+alpha=0.6, s=60, color='steelblue')
+# Anotar algumas ações de destaque
+top_acoes = stats['Sharpe aprox. anualizado'].sort_values(ascending=False).head(5).index
+for acao in top_acoes:
+plt.annotate(acao,
+(stats.loc[acao, 'Volatilidade anualizada (%)'],
+stats.loc[acao, 'Retorno médio anualizado (%)']),
+textcoords='offset points', xytext=(5,5), fontsize=9)
+plt.axhline(0, color='red', linestyle='--', linewidth=0.8, alpha=0.5)
+plt.title('Risco × Retorno,Ações do S&P100 (7 anos)', fontweight='bold')
+plt.xlabel('Volatilidade Anualizada (%)')
+plt.ylabel('Retorno Médio Anualizado (%)')
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig('risco_retorno_sp100.png', dpi=150)
+plt.show()
+
+5.3 Retorno por Período,Identificando Crises
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+Visualizar os retornos mensais do índice permite identificar rapidamente os períodos
+de crise e normalidade que estão presentes nos seus dados de 7 anos.
+
+# Retorno mensal do índice
+ret_mensal_sp = ret_idx_sp.resample('ME').sum() # soma dos retornos diários do mês
+ret_mensal_ib = ret_idx_ib.resample('ME').sum()
+fig, axes = plt.subplots(2, 1, figsize=(16, 8))
+for ax, ret, titulo, cor_pos, cor_neg in [
+(axes[0], ret_mensal_sp, 'S&P100', 'steelblue', 'tomato'),
+(axes[1], ret_mensal_ib, 'IBOVESPA', 'darkgreen', 'firebrick'),
+]:
+cores = [cor_pos if r > 0 else cor_neg for r in ret.values]
+ax.bar(range(len(ret)), ret.values * 100, color=cores, edgecolor='white', linewidth=0.3)
+ax.axhline(0, color='black', linewidth=0.8)
+ax.set_title(f'Retorno Mensal,{titulo}', fontweight='bold', fontsize=13)
+ax.set_ylabel('Retorno (%)')
+ax.set_xticks(range(0, len(ret), 6))
+ax.set_xticklabels(ret.index[::6].strftime('%b/%Y'), rotation=45, fontsize=9)
+ax.grid(True, alpha=0.2, axis='y')
+# Anotar o pior mês
+pior_idx = ret.values.argmin()
+pior_val = ret.values[pior_idx] * 100
+ax.annotate(f'{pior_val:.1f}%',
+xy=(pior_idx, pior_val), xytext=(pior_idx+5, pior_val-3),
+arrowprops=dict(arrowstyle='->', color='black'),
+fontsize=9, color='darkred')
+plt.tight_layout()
+plt.savefig('retorno_mensal_indices.png', dpi=150)
+plt.show()
+# Retorno acumulado por ano
+ret_anual_sp = (1 + ret_idx_sp).resample('YE').prod() - 1
+ret_anual_ib = (1 + ret_idx_ib).resample('YE').prod() - 1
+print('\nRetorno anual S&P100:')
+print((ret_anual_sp * 100).round(2))
+print('\nRetorno anual IBOVESPA:')
+print((ret_anual_ib * 100).round(2))
+
+5.4 Correlação com o Índice,A Análise Central do Projeto
+Para o index tracking, a correlação de cada ação com o índice é a informação mais
+valiosa da EDA. Ações com alta correlação com o índice são candidatas naturais para
+compor o portfólio de tracking.
+
+# Correlação de cada ação com o índice
+# Alinhar os índices de data primeiro
+datas_comuns = ret_sp100_clean.index.intersection(ret_idx_sp.index)
+ret_acoes_al = ret_sp100_clean.loc[datas_comuns]
+ret_idx_al = ret_idx_sp.loc[datas_comuns]
+# Calcular correlação de cada ação com o índice
+corr_com_idx = ret_acoes_al.corrwith(ret_idx_al).sort_values(ascending=False)
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+print('TOP 15,Ações mais correlacionadas com o S&P100:')
+print(corr_com_idx.head(15).round(4))
+print('\nBOTTOM 10,Ações menos correlacionadas com o S&P100:')
+print(corr_com_idx.tail(10).round(4))
+# Gráfico de correlação com o índice
+plt.figure(figsize=(14, 8))
+cores = ['steelblue' if c > 0.7 else ('orange' if c > 0.5 else 'tomato')
+for c in corr_com_idx.values]
+corr_com_idx.plot(kind='bar', color=cores, edgecolor='white', linewidth=0.3)
+plt.axhline(0.7, color='green', linestyle='--', linewidth=1.5,
+label='Correlação 0.70 (referência)')
+plt.axhline(0.5, color='orange', linestyle='--', linewidth=1.5,
+label='Correlação 0.50 (referência)')
+plt.title('Correlação de Cada Ação com o Índice S&P100', fontweight='bold', fontsize=13)
+plt.xlabel('Ação')
+plt.ylabel('Correlação de Pearson')
+plt.xticks(rotation=90, fontsize=7)
+plt.legend()
+plt.tight_layout()
+plt.savefig('correlacao_com_indice_sp100.png', dpi=150)
+plt.show()
+# Quantos % das ações têm correlação > 0.7?
+pct_alta_corr = (corr_com_idx > 0.7).mean() * 100
+print(f'\n{pct_alta_corr:.1f}% das ações têm correlação > 0.7 com o índice')
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+6. EDA - Parte 3: Correlação Entre Ações e
+Análise por Setor
+A correlação entre pares de ações é essencial para entender a estrutura do mercado.
+Ações muito correlacionadas entre si são redundantes para o portfólio,incluir as duas
+não traz benefício adicional de diversificação.
+
+6.1 Matriz de Correlação Entre Ações
+# Matriz de correlação entre todas as ações
+corr_matrix = ret_sp100_clean.corr()
+# Heatmap,para muitas ações, use uma amostra das mais representativas
+# Selecionar as 30 ações com maior correlação com o índice
+top30 = corr_com_idx.head(30).index
+corr_top30 = ret_sp100_clean[top30].corr()
+plt.figure(figsize=(14, 12))
+import numpy as np
+mask = np.triu(np.ones_like(corr_top30, dtype=bool)) # mostrar só triângulo inferior
+sns.heatmap(
+corr_top30,
+mask=mask,
+annot=True, fmt='.2f',
+cmap='RdYlBu_r',
+center=0, square=True,
+linewidths=0.3,
+vmin=-1, vmax=1,
+cbar_kws={'shrink': 0.8},
+annot_kws={'size': 7}
+)
+plt.title('Correlação Entre as 30 Ações Mais Correlacionadas com o S&P100',
+fontweight='bold', fontsize=12)
+plt.tight_layout()
+plt.savefig('heatmap_correlacao_acoes.png', dpi=150, bbox_inches='tight')
+plt.show()
+# Encontrar pares com correlação muito alta (potencialmente redundantes)
+pares_alta_corr = []
+for i in range(len(corr_matrix.columns)):
+for j in range(i+1, len(corr_matrix.columns)):
+r = corr_matrix.iloc[i, j]
+if r > 0.90:
+pares_alta_corr.append({
+'Ação 1': corr_matrix.columns[i],
+'Ação 2': corr_matrix.columns[ j],
+'Correlação': round(r, 3)
+})
+df_pares = pd.DataFrame(pares_alta_corr).sort_values('Correlação', ascending=False)
+print(f'Pares com correlação > 0.90: {len(df_pares)}')
+print(df_pares.head(20).to_string(index=False))
+
+6.2 Análise por Setor da Economia
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+Ações do mesmo setor tendem a se mover juntas (alta correlação intra-setor).
+Entender isso ajuda a interpretar os resultados do modelo de otimização e a fazer a
+apresentação mais rica.
+
+📊 Setores do S&P100 e seus representantes
+
+●​ Tecnologia: AAPL, MSFT, NVDA, META, GOOGL, AMZN,maior peso, alta
+correlação entre si
+●​ Saúde: JNJ, UNH, ABBV, PFE, MRK,defensivo, menos sensível ao ciclo
+econômico
+●​ Finanças: JPM, BAC, WFC, GS,sensíveis a juros e ciclo econômico
+●​ Energia: XOM, CVX,correlacionados com preço do petróleo (WTI/Brent)
+●​ Consumo básico: PG, KO, WMT,defensivos, pouca variação em crises
+●​ Consumo discricionário: AMZN, TSLA, MCD,sensíveis ao ciclo econômico
+
+Para o IBOV, os setores mais representativos são:
+●​ Commodities: VALE3, CSNA3, GGBR4,correlacionados com preço de
+minério e aço
+●​ Petróleo: PETR4,correlacionado com preço do petróleo e câmbio
+●​ Financeiro: ITUB4, BBDC4, BBAS3,dominam o índice em peso
+
+# Adicionar setor de cada ação e analisar correlação média por setor
+# Dicionário de setores,preencha com os setores reais
+setores_sp100 = {
+'AAPL': 'Tecnologia', 'MSFT': 'Tecnologia', 'NVDA': 'Tecnologia',
+'META': 'Tecnologia', 'GOOGL': 'Tecnologia', 'GOOG': 'Tecnologia',
+'JPM': 'Financeiro', 'BAC': 'Financeiro', 'WFC': 'Financeiro',
+'JNJ': 'Saúde', 'UNH': 'Saúde', 'ABBV': 'Saúde', 'PFE': 'Saúde',
+'XOM': 'Energia', 'CVX': 'Energia',
+'PG': 'Cons. Básico', 'KO': 'Cons. Básico', 'WMT': 'Cons. Básico',
+'TSLA': 'Cons. Discric.', 'AMZN': 'Cons. Discric.', 'HD': 'Cons. Discric.',
+# ... adicionar os demais
+}
+# Correlação média com o índice por setor
+df_corr_setor = pd.DataFrame({
+'acao': corr_com_idx.index,
+'corr_idx': corr_com_idx.values
+})
+df_corr_setor['setor'] = df_corr_setor['acao'].map(setores_sp100).fillna('Outros')
+corr_por_setor = df_corr_setor.groupby('setor')['corr_idx'].agg(['mean','std','count'])
+corr_por_setor.columns = ['Corr. média', 'Desvio', 'N ações']
+print('\nCorrelação média com o índice por setor:')
+print(corr_por_setor.sort_values('Corr. média', ascending=False).round(3))
+# Boxplot de correlação por setor
+plt.figure(figsize=(12, 6))
+setores_ord = df_corr_setor.groupby('setor')['corr_idx'].median().sort_values(ascending=False).index
+sns.boxplot(data=df_corr_setor, x='setor', y='corr_idx',
+order=setores_ord, palette='Blues')
+plt.title('Correlação com o S&P100 por Setor', fontweight='bold')
+plt.xlabel('Setor')
+plt.ylabel('Correlação com o Índice')
+plt.xticks(rotation=30)
+plt.tight_layout()
+plt.savefig('correlacao_por_setor.png', dpi=150)
+plt.show()
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+7. EDA - Parte 4: Volatilidade e Períodos de
+Crise
+Entender quando os mercados foram mais voláteis e por quê é fundamental para
+contextualizar os dados e fazer a apresentação mais rica. Os 7 anos do projeto
+(2018–2025) contêm vários eventos de mercado relevantes.
+
+7.1 Linha do Tempo dos Principais Eventos
+Período
+
+Evento
+
+Out/2018
+
+Guerra comercial EUA × China
+
+Mar/2020
+
+Pandemia COVID-19
+
+Nov/2020
+
+Anúncio das vacinas
+
+Jan–Dez/2022
+
+Alta de juros nos EUA (Fed)
+
+Nov/2022
+
+Crise FTX (cripto)
+
+Out/2023
+
+Conflito Israel-Hamas
+
+Jan/2024
+
+Rally de IA (NVDA, MSFT)
+
+7.2 Volatilidade Móvel,Como o Risco Muda ao Longo do Tempo
+# Volatilidade móvel (rolling),janela de 21 dias úteis (~1 mês)
+vol_sp = ret_idx_sp.rolling(window=21).std() * np.sqrt(252) * 100 # anualizada
+vol_ib = ret_idx_ib.rolling(window=21).std() * np.sqrt(252) * 100
+fig, axes = plt.subplots(2, 1, figsize=(14, 9), sharex=False)
+for ax, vol, ret, titulo, cor in [
+(axes[0], vol_sp, ret_idx_sp, 'Volatilidade Móvel (21d),S&P100', 'navy'),
+(axes[1], vol_ib, ret_idx_ib, 'Volatilidade Móvel (21d),IBOVESPA', 'darkgreen'),
+]:
+ax.fill_between(vol.index, vol, alpha=0.3, color=cor)
+ax.plot(vol.index, vol, color=cor, linewidth=1.5)
+ax.axhline(vol.mean(), color='gray', linestyle='--', linewidth=1,
+label=f'Média histórica ({vol.mean():.1f}%)')
+ax.set_title(titulo, fontweight='bold', fontsize=12)
+ax.set_ylabel('Volatilidade anualizada (%)')
+ax.legend(fontsize=10)
+ax.grid(True, alpha=0.2)
+# Marcar COVID
+covid_date = '2020-03-01'
+if covid_date in vol.index.strftime('%Y-%m-%d'):
+ax.axvline(pd.Timestamp(covid_date), color='red',
+linestyle=':', linewidth=2, alpha=0.7, label='COVID-19')
+plt.tight_layout()
+plt.savefig('volatilidade_movel.png', dpi=150)
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+plt.show()
+# Estatísticas de volatilidade
+print(f'Volatilidade média histórica S&P100: {vol_sp.mean():.1f}% a.a.')
+print(f'Volatilidade máxima S&P100:
+{vol_sp.max():.1f}% a.a.')
+print(f'Data do pico de volatilidade:
+{vol_sp.idxmax().date()}')
+print(f'\nVolatilidade média histórica IBOV: {vol_ib.mean():.1f}% a.a.')
+print(f'Volatilidade máxima IBOV:
+{vol_ib.max():.1f}% a.a.')
+
+7.3 Comparativo S&P100 vs. IBOVESPA
+# Alinhar datas dos dois índices para comparação direta
+datas_comuns_idx = ret_idx_sp.index.intersection(ret_idx_ib.index)
+sp_al = ret_idx_sp.loc[datas_comuns_idx]
+ib_al = ret_idx_ib.loc[datas_comuns_idx]
+# Retorno acumulado comparativo
+sp_acum = (1 + sp_al).cumprod() * 100
+ib_acum = (1 + ib_al).cumprod() * 100
+plt.figure(figsize=(14, 7))
+plt.plot(sp_acum.index, sp_acum, color='navy', lw=2.5, label='S&P100 (USD)')
+plt.plot(ib_acum.index, ib_acum, color='darkgreen', lw=2.5, label='IBOVESPA (BRL)')
+plt.fill_between(sp_acum.index, sp_acum, ib_acum, alpha=0.05, color='gray')
+plt.title('Retorno Acumulado Comparativo,S&P100 vs. IBOVESPA (Base 100)',
+fontweight='bold', fontsize=13)
+plt.ylabel('Valor (Base 100)')
+plt.legend(fontsize=12)
+plt.grid(True, alpha=0.2)
+plt.tight_layout()
+plt.savefig('comparativo_sp100_ibov.png', dpi=150)
+plt.show()
+# Tabela resumo comparativa
+resumo = pd.DataFrame({
+'S&P100': [
+f'{sp_al.mean()*252*100:.2f}%',
+f'{sp_al.std()*np.sqrt(252)*100:.2f}%',
+f'{(sp_al.mean()/sp_al.std()*np.sqrt(252)):.3f}',
+f'{sp_acum.iloc[-1]-100:.1f}%',
+f'{sp_al.min()*100:.2f}%',
+f'{sp_al.max()*100:.2f}%',
+],
+'IBOVESPA': [
+f'{ib_al.mean()*252*100:.2f}%',
+f'{ib_al.std()*np.sqrt(252)*100:.2f}%',
+f'{(ib_al.mean()/ib_al.std()*np.sqrt(252)):.3f}',
+f'{ib_acum.iloc[-1]-100:.1f}%',
+f'{ib_al.min()*100:.2f}%',
+f'{ib_al.max()*100:.2f}%',
+]
+}, index=['Retorno anualizado', 'Volatilidade anualizada', 'Sharpe aproximado',
+'Retorno acumulado total', 'Pior dia', 'Melhor dia'])
+print('\n=== COMPARATIVO S&P100 vs. IBOVESPA ===')
+print(resumo.to_string())
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+8. Prompts de IA: Para
+Entendimento dos Dados
+
+Aprofundar
+
+o
+
+Use estes prompts para aprofundar o entendimento financeiro e interpretar os
+resultados da EDA. Cole os dados reais do grupo entre colchetes [ ].
+
+🤖 Prompt 1,Entender os Dados Financeiros
+
+───────────────────────────────────────────────────────
+
+Sou estudante de Data Science e estou fazendo EDA em dados históricos de ações
+do
+S&P100 e IBOVESPA para um projeto de index tracking. Meus dados incluem
+preços
+diários de fechamento ajustado (Adj Close) de 2018 a 2025.
+Me explique de forma prática:
+1. Por que usamos retornos logarítmicos ao invés de preços em finanças?
+2. O que significa dizer que retornos financeiros têm 'fat tails' (caudas gordas)?
+3. O que é volatilidade anualizada e como interpretar um valor de 20% ao ano?
+4. O que é o índice de Sharpe e o que significa um Sharpe de 0.8 vs. 1.5?
+5. Por que ações do mesmo setor tendem a ter alta correlação entre si?
+6. O que o evento COVID-19 (março/2020) representou em termos de retornos e
+volatilidade? O que esperar ver nos dados desse período?
+
+🤖 Prompt 2,Interpretar os Resultados da Correlação
+
+───────────────────────────────────────────────────────
+
+Analisei a correlação de cada ação do S&P100 com o índice e obtive os seguintes
+resultados:
+[Cole aqui os resultados: 'TOP 10 correlações: MSFT=0.95, AAPL=0.93...'
+e 'BOTTOM 10: TSLA=0.45, BRK-B=0.50...']
+1. Por que algumas ações têm correlação tão alta com o índice e outras tão baixa?
+2. Para um modelo de index tracking, quais dessas ações são mais valiosas?
+3. Ações com baixa correlação deveriam ser completamente ignoradas?
+4. O que significa correlação negativa entre uma ação e o índice?
+5. Como a correlação muda em períodos de crise vs. períodos normais?
+6. Como apresentar essa análise de correlação para alguém sem background em
+finanças?
+
+🤖 Prompt 3,Interpretar os Dados de Volatilidade
+
+───────────────────────────────────────────────────────
+
+Calculei a volatilidade anualizada das ações do S&P100 e obtive:
+[Cole aqui: 'Volatilidade média do índice: X%'
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+'Ações mais voláteis: TSLA=Y%, ...'
+'Ações menos voláteis: KO=Z%, ...']
+1. O que explica por que algumas ações são muito mais voláteis que o índice?
+2. Para o index tracking, é melhor usar ações voláteis ou estáveis? Por quê?
+3. O que o gráfico de volatilidade móvel nos mostra sobre o comportamento do
+mercado
+ao longo dos últimos 7 anos?
+4. Como interpretar um pico de volatilidade de 80% ao ano (como em março/2020)?
+5. Existe relação entre volatilidade e retorno esperado? Como comunicar isso na
+apresentação de forma intuitiva?
+
+🤖 Prompt 4,Análise Comparativa S&P100 vs. IBOVESPA
+───────────────────────────────────────────────────────
+
+Comparei os dois índices e obtive:
+[Cole aqui os resultados do seu resumo comparativo,retorno anualizado,
+volatilidade, Sharpe, retorno acumulado total de cada índice]
+1. O que justifica as diferenças de retorno entre S&P100 e IBOVESPA?
+2. Qual índice é historicamente mais difícil de replicar por index tracking e por quê?
+3. O fato de o IBOV ser em BRL e o S&P100 em USD cria alguma dificuldade
+na comparação? Como tratar isso?
+4. Como a concentração em poucos setores (commodities e finanças no IBOV;
+tecnologia no S&P) afeta a estratégia de index tracking?
+5. O que a diferença de Sharpe entre os dois índices nos diz sobre risco × retorno
+no mercado americano vs. brasileiro?
+
+🤖 Prompt 5,Preparar a Narrativa para a Apresentação
+───────────────────────────────────────────────────────
+
+Realizei a EDA completa dos dados do S&P100 e IBOVESPA para o projeto de index
+tracking. Principais achados:
+[Descreva seus 3-5 principais insights da EDA aqui]
+Exemplo: 'X% das ações têm correlação > 0.7 com o índice;
+a volatilidade explodiu em março/2020 para Y% ao ano;
+as ações do setor Z são as mais correlacionadas...'
+Preciso apresentar esses resultados em [N] minutos para a turma.
+1. Sugira uma narrativa de 3 atos para organizar a apresentação
+(gancho inicial → desenvolvimento → conclusão)
+2. Quais dos meus insights são mais surpreendentes ou interessantes?
+3. Que perguntas a turma provavelmente vai fazer e como responder?
+4. Quais são os 5 gráficos mais importantes para incluir?
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+9. Checklist: O que Apresentar
+A apresentação desta semana deve demonstrar que o grupo entende profundamente
+os dados,não só que coletou e limpou, mas que sabe o que os dados significam e o
+que revelam sobre o mercado.
+
+9.1 O que os Professores/Avaliadores Querem Ver
+Critério
+
+O que demonstrar na apresentação
+
+Entendimento
+domínio
+
+do
+
+Explicar o que é o S&P100, o IBOVESPA, o que são
+retornos, por que usamos Adj Close,sem precisar que
+perguntem
+
+Qualidade dos dados
+
+Mostrar quantas ações tinham dados faltantes, o que foi
+feito, quais foram removidas e por quê,com critério
+justificado
+
+EDA com insight
+
+Não apenas mostrar gráficos, mas interpretá-los: 'este
+resultado significa que...' conectando dado com
+realidade do mercado
+
+Contextualização
+temporal
+
+Identificar os eventos históricos nos dados (COVID, juros,
+etc.) e mostrar como eles aparecem nos gráficos
+
+Conexão
+projeto
+
+com
+
+Qualidade visual
+
+o
+
+Mostrar que a EDA já aponta quais ações são boas
+candidatas para o portfólio de tracking e por quê
+Gráficos
+claros,
+com
+títulos,
+rótulos,
+legendas,padronizados e legíveis para a audiência
+
+9.2 Checklist de Entregas Técnicas
+
+📥 Dados Coletados
+•​
+•​
+•​
+•​
+•​
+
+Preços diários de todas as ações do S&P100 (2018–2025)
+Preços diários de todas as ações do IBOVESPA (2018–2025)
+Dados do índice S&P100 (^OEX) e IBOVESPA (^BVSP)
+Retornos logarítmicos calculados para ações e índices
+Dados salvos localmente em CSV para não precisar baixar toda vez
+
+🧹 Limpeza e Qualidade
+•​
+•​
+•​
+•​
+•​
+
+Análise de dados faltantes por ação,percentual e motivo quando possível
+Definição e aplicação do critério de remoção (ex: >20% de nulos)
+Forward fill aplicado para nulos residuais
+Identificação de retornos extremos (possíveis outliers / erros de dados)
+Documentação das decisões de tratamento com justificativa
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+FINOR | Bootcamp Data Science 2026 , Guia: Entendimento e EDA dos Dados
+
+📊 Análises de EDA
+•​
+•​
+•​
+•​
+•​
+•​
+•​
+•​
+•​
+
+Gráfico de performance normalizada (base 100),ações + índice
+Estatísticas descritivas dos retornos por ação (média, std, Sharpe, mín/máx)
+Gráfico de retorno mensal do índice (barras verdes/vermelhas por mês)
+Retorno acumulado anual do índice por ano
+Distribuição dos retornos do índice (histograma vs. curva normal)
+Correlação de cada ação com o índice,gráfico de barras ranqueado
+Heatmap de correlação entre as ações mais relevantes
+Análise de volatilidade móvel ao longo dos 7 anos
+Comparativo S&P100 vs. IBOVESPA,tabela resumo e gráfico acumulado
+
+🎯 Insights para Apresentar
+•​
+•​
+•​
+•​
+•​
+
+Quais ações são as mais correlacionadas com o índice (melhores candidatas
+para tracking)
+Quais setores da economia são mais fáceis de replicar
+Como COVID-19 e crise de juros 2022 aparecem nos dados
+Qual índice (S&P100 ou IBOV) parece mais difícil de replicar,e por quê
+Quantas ações foram removidas na limpeza e qual o impacto
+
+🚀 Dica Final,Conte uma história com os dados
+
+A diferença entre uma apresentação boa e uma excelente é a narrativa.
+Não mostre os gráficos um por um como uma lista de resultados. Construa uma
+história:
+**'Começamos com [N] ações,mas após a limpeza, trabalhamos com [M]. Ao
+explorar os dados, descobrimos que [insight 1]. O evento mais marcante nos
+dados foi [evento] em [data], quando [o que aconteceu]. Em termos de
+correlação, [insight 2]. Isso nos leva a concluir que, para o S&P100, as ações mais
+promissoras para o portfólio de tracking são aquelas do setor [X], pois [motivo].'**
+Isso mostra entendimento,não apenas execução técnica. Bom trabalho!
+
+Bootcamp Data Science 2026 | Dados e EDA
+
+📊
+
+
