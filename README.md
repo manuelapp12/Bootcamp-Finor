@@ -72,21 +72,21 @@ Siga os passos abaixo para configurar seu ambiente de desenvolvimento:
             1 Briefing_Entrega_TG1: 
                   1.1 coleta;
                         1.1.1 - Arthur
-                              Buscar os dados históricos dos últimos 7 anos dos índices IBOV;
+                              [x] Buscar os dados históricos dos últimos 7 anos dos índices IBOV;
                   1.2 limpeza;
                         1.2.1 - Arthur
-                              Carregar o dataset e verificar shape, dtypes e head
+                              [x] Carregar o dataset e verificar shape, dtypes e head
                         1.2.2 - Laura
-                              Identificar e documentar o significado de cada coluna
+                              [x] Identificar e documentar o significado de cada coluna
                         1.2.3 - Arthur
-                              Verificar o cabeçalho e o delimitador do arquivo
+                              [x] Verificar o cabeçalho e o delimitador do arquivo
                         1.2.4 - Decisão Técnica Conjunta
-                              Identificado que a ação da Embraer estava listada como `EMBJ3` no dataset bruto. Devido à mudança de ticker e ausência de histórico consolidado para `EMBJ3.SA` (ou falha na API para `EMBR3.SA`) no Yahoo Finance, o ativo retornou 100% de dados nulos. A decisão técnica para a limpeza de dados foi enquadrar o ativo como **Dado Faltante (Missing Data)** estrutural e **remover a ação da análise** (aplicando o critério de exclusão para ações com >20% de dados faltantes). Como o modelo de Index Tracking visa selecionar um subconjunto restrito de ações, a exclusão pontual deste ativo não inviabiliza o projeto.
+                              [x] Identificado que a ação da Embraer estava listada como `EMBJ3` no dataset bruto. Devido à mudança de ticker e ausência de histórico consolidado para `EMBJ3.SA` (ou falha na API para `EMBR3.SA`) no Yahoo Finance, o ativo retornou 100% de dados nulos. A decisão técnica para a limpeza de dados foi enquadrar o ativo como **Dado Faltante (Missing Data)** estrutural e **remover a ação da análise** (aplicando o critério de exclusão para ações com >20% de dados faltantes). Como o modelo de Index Tracking visa selecionar um subconjunto restrito de ações, a exclusão pontual deste ativo não inviabiliza o projeto.
                   1.3 pré-processamento e análise exploratória dos dados;
                         1.3.1 - Ígor
-                              Analisar a % de valores ausentes por coluna
+                              [x] Analisar a % de valores ausentes por coluna
                         1.3.2 - Ígor
-                              Definir e aplicar a estratégia de tratamento de missing values
+                              [x] Definir e aplicar a estratégia de tratamento de missing values
                         1.3.3 - Rafael
                               Identificar e documentar os outliers encontrador
                         1.3.4 - Rafael
