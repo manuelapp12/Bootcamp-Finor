@@ -100,9 +100,9 @@ Siga os passos abaixo para configurar seu ambiente de desenvolvimento:
                         1.3.4 - Rafael
                               Decidir o que fazer com cada outlier (manter, recmover ou transformar)
                         1.3.5 - Arthur
-                              Verificar e remover duplicatas
+                              [x] Verificar e remover duplicatas (Verificado no código: 0 duplicatas devido à ingestão nativa via DatetimeIndex do `yfinance`)
                         1.3.6 - Arthur
-                              Padronizar tipos de dados (datas, textos, números)
+                              [x] Padronizar tipos de dados (datas, textos, números) (Validado no código: todos os preços padronizados como `float64`)
                   1.4 (28/05) entrega e apresentação
                         1.4.1 - Manuela & Laura
                               Preparar uma apresentação de alta qualidade explicando as estratégias utilizadas para o pre-processamento, a análise exploratória da base de dados a seleção de modelos, as reamostragens e os resultados das previsões/inferências com modelos lineares. A apresentação será feita em sala com utilização de PPT e outros recursos visuais que o grupo achar melhor. Cada grupo terá 20 minutos.

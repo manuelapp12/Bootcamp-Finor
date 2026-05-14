@@ -17,14 +17,8 @@ dataset = pd.read_csv(
 dataset.columns = ['ticker','name','type','qtd','part']
 print(f"Dataset lido com {dataset.shape[0]} ações do IBOVESPA.")
 
-
-# 1. Extrair os tickers e adicionar o sufixo '.SA' para o Yahoo Finance
-# A primeira coluna do CSV é o 'Código' (Ticker)
 tickers_ibov = dataset['ticker'].astype(str) + '.SA'
-
 tickers_ibov_list = tickers_ibov.tolist()
-
-
 
 ticker_idx_ibov = '^BVSP'
 inicio = '2018-01-01'
@@ -36,9 +30,9 @@ indice_ibov = yf.download(ticker_idx_ibov, start=inicio, end=fim, auto_adjust=Tr
 print("\nBaixando dados das ações do IBOVESPA...")
 dados_ibov = yf.download(tickers_ibov_list, start=inicio, end=fim, auto_adjust=True, progress=False)['Close']
 
-
 dados_ibov.to_csv('./data/ibov_precos.csv')
 indice_ibov.to_csv('./data/ibov_indice.csv')
+
 
 print(f"\nDownload concluído!")
 print(f"Dados Ações: {dados_ibov.shape[1]} ações x {dados_ibov.shape[0]} dias.")
@@ -61,13 +55,29 @@ limite_remocao = 20
 acoes_validas_ib = pct_ib[pct_ib <= limite_remocao].index
 dados_ibov_clean = dados_ibov[acoes_validas_ib].copy()
 
+# Ações invalidas para mostrar no Jupyter
+acoes_invalidas = pct_ib[pct_ib > limite_remocao].index
 print(f'\nLimpeza: {dados_ibov.shape[1]} -> {dados_ibov_clean.shape[1]} ações válidas após remover as que tem >20% faltantes.')
 
 # Preencher o resto com forward fill (feriados, suspensões temporárias)
-dados_ibov_clean = dados_ibov_clean.ffill().dropna(how='all')
+nulos_ib = dados_ibov_clean.isnull().sum()
+tickers_to_fowarfill = nulos_ib[nulos_ib > 0]
+# 1. Aplica o ffill apenas nas colunas específicas que têm buracos
+dados_ibov_clean[tickers_to_fowarfill.index] = dados_ibov_clean[tickers_to_fowarfill.index].ffill()
+
+# 2. Depois, remove qualquer linha que tenha ficado 100% vazia (feriados globais)
+dados_ibov_clean = dados_ibov_clean.dropna(how='all')
 
 # ==============================================================================
-# 6. CÁLCULO DE RETORNOS LOGARÍTMICOS
+# 6. AUDITORIA DE QUALIDADE (DUPLICATAS E TIPOS)
+# ==============================================================================
+print("\nRealizando auditoria final de qualidade...")
+print(f"Linhas duplicadas no dataset: {dados_ibov_clean.index.duplicated().sum()}")
+print(f"Formato da tabela limpa (Shape): {dados_ibov_clean.shape}")
+print(f"Tipos de dados presentes no dataframe: {dados_ibov_clean.dtypes.unique()}")
+
+# ==============================================================================
+# 7. CÁLCULO DE RETORNOS LOGARÍTMICOS
 # ==============================================================================
 print("\nCalculando retornos logarítmicos...")
 ret_ibov_clean = np.log(dados_ibov_clean / dados_ibov_clean.shift(1)).dropna()
