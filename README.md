@@ -90,6 +90,18 @@ Siga os passos abaixo para configurar seu ambiente de desenvolvimento:
                               [x] Verificar o cabeçalho e o delimitador do arquivo
                         1.2.4 - Decisão Técnica Conjunta
                               [x] Identificado que a ação da Embraer estava listada como `EMBJ3` no dataset bruto. Devido à mudança de ticker e ausência de histórico consolidado para `EMBJ3.SA` (ou falha na API para `EMBR3.SA`) no Yahoo Finance, o ativo retornou 100% de dados nulos. A decisão técnica para a limpeza de dados foi enquadrar o ativo como **Dado Faltante (Missing Data)** estrutural e **remover a ação da análise** (aplicando o critério de exclusão para ações com >20% de dados faltantes). Como o modelo de Index Tracking visa selecionar um subconjunto restrito de ações, a exclusão pontual deste ativo não inviabiliza o projeto.
+
+                        Estratégias para limpeza
+                           1. Artur
+                              Criar a tabela com as porcentagens de diferença entre os valores da ação, para assim conseguir ver melhor os outliers.
+                           2. Rafael
+                              Criar matriz de correlação - tabela com os pares de ações com correlaçãoa acima de 0,9.
+                           3. Laura
+                              Fazer as estatísticas descritivas de cada uma das ações.
+                           4. Rafael
+                              Olhar 1 a 1 esses pares e escolher as ações para ser retiradas, de acordo com as estatísticas descritivas.
+                           5. Manu
+                              Documentar outliers dos retornos 
                   1.3 pré-processamento e análise exploratória dos dados;
                         1.3.1 - Ígor
                               [x] Analisar a % de valores ausentes por coluna
