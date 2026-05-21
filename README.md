@@ -93,7 +93,7 @@ Siga os passos abaixo para configurar seu ambiente de desenvolvimento:
 
                         Estratégias para limpeza
                            1. Artur
-                              Criar a tabela com as porcentagens de diferença entre os valores da ação, para assim conseguir ver melhor os outliers.
+                              [x] Criar a tabela com as porcentagens de diferença entre os valores da ação, para assim conseguir ver melhor os outliers.
                            2. Rafael
                               Criar matriz de correlação - tabela com os pares de ações com correlaçãoa acima de 0,9.
                            3. Laura
