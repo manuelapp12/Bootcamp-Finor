@@ -62,12 +62,11 @@ print(f'\nLimpeza: {dados_ibov.shape[1]} -> {dados_ibov_clean.shape[1]} ações 
 # Preencher o resto com forward fill (feriados, suspensões temporárias)
 nulos_ib = dados_ibov_clean.isnull().sum()
 tickers_to_fowarfill = nulos_ib[nulos_ib > 0]
-# 1. Aplica o ffill apenas nas colunas específicas que têm buracos
-dados_ibov_clean[tickers_to_fowarfill.index] = dados_ibov_clean[tickers_to_fowarfill.index].ffill()
+# 1. Aplica o ffill (para frente) e depois o bfill (para trás) nas colunas que têm buracos
+dados_ibov_clean[tickers_to_fowarfill.index] = dados_ibov_clean[tickers_to_fowarfill.index].ffill().bfill()
 
 # 2. Depois, remove qualquer linha que tenha ficado 100% vazia (feriados globais)
 dados_ibov_clean = dados_ibov_clean.dropna(how='all')
-
 # ==============================================================================
 # 6. AUDITORIA DE QUALIDADE (DUPLICATAS E TIPOS)
 # ==============================================================================
@@ -77,16 +76,21 @@ print(f"Formato da tabela limpa (Shape): {dados_ibov_clean.shape}")
 print(f"Tipos de dados presentes no dataframe: {dados_ibov_clean.dtypes.unique()}")
 
 # ==============================================================================
-# 7. CÁLCULO DE RETORNOS LOGARÍTMICOS
+# 7. CÁLCULO DE RETORNOS LOGARÍTMICOS E SIMPLES
 # ==============================================================================
-print("\nCalculando retornos logarítmicos...")
+print("\nCalculando retornos logarítmicos e simples...")
+# Logarítmicos
 ret_ibov_clean = np.log(dados_ibov_clean / dados_ibov_clean.shift(1)).dropna()
 ret_idx_ib = np.log(indice_ibov / indice_ibov.shift(1)).dropna()
 
-print(f'Formato final dos retornos do IBOV: {ret_ibov_clean.shape}')
-print(f'Retorno médio diário do IBOV (índice): {float(ret_idx_ib.mean().iloc[0]):.4%}')
-print(f'Volatilidade diária do IBOV (índice): {float(ret_idx_ib.std().iloc[0]):.4%}')
+# Simples (Percentuais)
+ret_simples_ibov = dados_ibov_clean.pct_change().dropna()
 
-# Salvar retornos para a análise exploratória (Jupyter Notebook)
-ret_ibov_clean.to_csv('./data/ibov_retornos.csv')
-print("\nRetornos salvos em './data/ibov_retornos.csv' com sucesso!")
+print(f'Formato final dos retornos do IBOV: {ret_ibov_clean.shape}')
+print(f'Retorno médio diário do IBOV (índice log): {float(ret_idx_ib.mean().iloc[0]):.4%}')
+print(f'Volatilidade diária do IBOV (índice log): {float(ret_idx_ib.std().iloc[0]):.4%}')
+
+# Salvar retornos para a análise exploratória (Jupyter Notebook) e otimização
+ret_ibov_clean.to_csv('./data/ibov_retornos_logaritmicos.csv')
+ret_simples_ibov.to_csv('./data/ibov_retornos_simples.csv')
+print("\nRetornos salvos em './data/ibov_retornos_logaritmicos.csv' e './data/ibov_retornos_simples.csv' com sucesso!")
