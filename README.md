@@ -95,13 +95,13 @@ Siga os passos abaixo para configurar seu ambiente de desenvolvimento:
                            1. Artur
                               [x] Criar a tabela com as porcentagens de diferença entre os valores da ação, para assim conseguir ver melhor os outliers.
                            2. Rafael
-                              Criar matriz de correlação - tabela com os pares de ações com correlaçãoa acima de 0,9.
+                             [ x ]  Criar matriz de correlação - tabela com os pares de ações com correlaçãoa acima de 0,9.
                            3. Laura
-                              Fazer as estatísticas descritivas de cada uma das ações.
+                             [ x ] Fazer as estatísticas descritivas de cada uma das ações.
                            4. Rafael
-                              Olhar 1 a 1 esses pares e escolher as ações para ser retiradas, de acordo com as estatísticas descritivas.
+                             [ x ]  Olhar 1 a 1 esses pares e escolher as ações para ser retiradas, de acordo com as estatísticas descritivas.
                            5. Manu
-                              Documentar outliers dos retornos 
+                             [ x ] Documentar outliers dos retornos 
                   1.3 pré-processamento e análise exploratória dos dados;
                         1.3.1 - Ígor
                               [x] Analisar a % de valores ausentes por coluna
