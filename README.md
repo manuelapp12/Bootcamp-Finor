@@ -124,3 +124,11 @@ Siga os passos abaixo para configurar seu ambiente de desenvolvimento:
             
       ~~2. Criar um modelo de Index Tracking (IT) do S&P100~~
             ~~2.2 Buscar os dados históricos dos últimos 7 anos dos índices S&P100~~
+
+
+# Como estruturar a Apresentação
+    1. Devolver o problema deles (2 min)
+    2. O que os dados revelaram (3 min)
+    3. O que o modelo faz - em linguagem humana - (4 min)
+    4. O que ainda não sabemos (3 min)
+    5. Próximos passos propostos
