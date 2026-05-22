@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 dados = pd.read_csv('./data/ibov_retornos_simples.csv', index_col=0, parse_dates=True)
-indice = pd.read_csv('./data/ibov_indice.csv', index_col=0, parse_dates=True)
+indice = pd.read_csv('./data/ibov_indice_retornos.csv', index_col=0, parse_dates=True)
 
 # Calcula a matriz de correlação entre todas as colunas numéricas
 corr = dados.corr(method='pearson')
@@ -29,7 +29,7 @@ print("\nDataFrame após remoção das ações com alta correlação:")
 print(dados_filtrados)
 
 # Puxa a série do índice diretamente do DataFrame 'indice' que foi carregada
-serie_ibov = indice['^BVSP']
+serie_ibov = indice['Variação_Diária_%']
 
 #Calcula a correlação cruzando o DataFrame de ações com a Série do índice
 corr_com_indice = dados_filtrados.corrwith(serie_ibov)
