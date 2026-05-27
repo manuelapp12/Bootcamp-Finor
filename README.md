@@ -132,3 +132,19 @@ Siga os passos abaixo para configurar seu ambiente de desenvolvimento:
     3. O que o modelo faz - em linguagem humana - (4 min)
     4. O que ainda não sabemos (3 min)
     5. Próximos passos propostos
+
+# Estrutura do Repositório (Guia para a Equipe)
+
+Para manter o projeto organizado e alinhado com boas práticas de Data Science, adotamos a seguinte arquitetura de pastas. **Por favor, sigam esta estrutura ao adicionar novos arquivos:**
+
+*   **`data/`**: Reservado ESTRITAMENTE para arquivos de dados (CSV, JSON, Excel).
+    *   `raw/`: Dados originais e brutos (ex: datasets baixados). **Nunca altere os arquivos aqui.**
+    *   `processed/`: Dados limpos e transformados após o pré-processamento.
+*   **`notebooks/`**: Todos os arquivos do Jupyter (`.ipynb`) devem ser salvos aqui. **Não salvem notebooks dentro da pasta `data/`**.
+*   **`src/`**: Scripts Python puros (`.py`) com as lógicas de processamento, EDA e modelagem.
+*   **`docs/`**: Manuais, PDF de briefing e documentos de texto auxiliares.
+*   **`reports/`**: Produtos finais do projeto.
+    *   `figures/`: Gráficos e imagens gerados nas análises (`.png`, `.jpg`).
+    *   `[Arquivo PPTX]`: A apresentação final do grupo.
+
+**Regra de Ouro:** Não misture código (`.ipynb`, `.py`) com arquivos de dados (`.csv ou .xlsx`). Se o seu código gera um gráfico, direcione o salvamento para `reports/figures/`. Se gera um CSV tratado, salve-o em `data/processed/`.
