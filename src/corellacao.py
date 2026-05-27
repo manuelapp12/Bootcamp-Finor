@@ -33,7 +33,7 @@ print("\nPares com correlação > |0.8|:")
 print(tabela_alta_corr.sort_values(by='Correlacao', ascending=False))
 
 # Cria novo dataframe sem essas ações
-dados_filtrados = dados.drop(columns=['PETR3.SA','BBDC3.SA','GOAU4.SA','AXIA6.SA','ITUB4.SA','BRAP4.SA','BBDC4.SA'], errors='ignore')
+dados_filtrados = dados.drop(columns=['PETR4.SA','BBDC3.SA','GOAU4.SA','AXIA6.SA','ITUB4.SA','BRAP4.SA','BBDC4.SA'], errors='ignore')
 print("\nDataFrame após remoção das ações com alta correlação:")
 print(dados_filtrados)
 
@@ -65,7 +65,7 @@ X_escalado = scaler.fit_transform(X)
 modelo_juiz = LinearRegression()
 
 # Configura o RFECV
-seletor_rfecv = RFECV(estimator=modelo_juiz, step=1, cv=5)
+seletor_rfecv = RFECV(estimator=modelo_juiz, step=1, cv=5, scoring='neg_mean_squared_error')
 
 #Treina o modelo (O algoritmo vai testar todas as combinações)
 seletor_rfecv.fit(X_escalado, y)
