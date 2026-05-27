@@ -5,8 +5,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 
 # Importa os dados de retornos simples das ações e do índice IBOV
-dados = pd.read_csv('./data/ibov_retornos_simples.csv', index_col=0, parse_dates=True)
-indice = pd.read_csv('./data/ibov_indice_retornos.csv', index_col=0, parse_dates=True)
+dados = pd.read_csv('data/processed/ibov_retornos_simples.csv', index_col=0, parse_dates=True)
+indice = pd.read_csv('data/processed/ibov_indice_retornos.csv', index_col=0, parse_dates=True)
 
 # =====================================================================================
 # Seleção através da correlação
@@ -98,4 +98,4 @@ print("\nNovo Banco de Dados ")
 print(dados_finais)
 
 #Sala os retornos das ações selecionadas em um novo arquivo CSV
-dados_finais.to_csv('./data/ibov_acoes_selecionadas.csv')
+dados_finais.to_csv('data/processed/ibov_acoes_selecionadas.csv')

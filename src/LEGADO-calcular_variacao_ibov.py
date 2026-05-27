@@ -3,8 +3,8 @@ import os
 
 def main():
     # Caminho do arquivo de entrada e saída
-    input_file = "data/ibov_indice.csv"
-    output_file = "data/ibov_retornos.csv"
+    input_file = "data/processed/ibov_indice.csv"
+    output_file = "data/processed/ibov_indice_retornos.csv"
     
     # Verifica se o arquivo de entrada existe
     if not os.path.exists(input_file):

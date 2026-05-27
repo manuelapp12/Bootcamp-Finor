@@ -3,7 +3,7 @@ import numpy as np
 import yfinance as yf 
 
 dataset = pd.read_csv(
-    './data/IBOVDia_11-05-26.csv',
+    'data/raw/IBOVDia_11-05-26.csv',
     sep=';',
     skipfooter=2, 
     skiprows=1,
@@ -30,8 +30,8 @@ indice_ibov = yf.download(ticker_idx_ibov, start=inicio, end=fim, auto_adjust=Tr
 print("\nBaixando dados das ações do IBOVESPA...")
 dados_ibov = yf.download(tickers_ibov_list, start=inicio, end=fim, auto_adjust=True, progress=False)['Close']
 
-dados_ibov.to_csv('./data/ibov_precos.csv')
-indice_ibov.to_csv('./data/ibov_indice.csv')
+dados_ibov.to_csv('data/processed/ibov_precos.csv')
+indice_ibov.to_csv('data/processed/ibov_indice.csv')
 
 
 print(f"\nDownload concluído!")
@@ -91,6 +91,6 @@ print(f'Retorno médio diário do IBOV (índice log): {float(ret_idx_ib.mean().i
 print(f'Volatilidade diária do IBOV (índice log): {float(ret_idx_ib.std().iloc[0]):.4%}')
 
 # Salvar retornos para a análise exploratória (Jupyter Notebook) e otimização
-ret_ibov_clean.to_csv('./data/ibov_retornos_logaritmicos.csv')
-ret_simples_ibov.to_csv('./data/ibov_retornos_simples.csv')
-print("\nRetornos salvos em './data/ibov_retornos_logaritmicos.csv' e './data/ibov_retornos_simples.csv' com sucesso!")
+ret_ibov_clean.to_csv('data/processed/ibov_retornos_logaritmicos.csv')
+ret_simples_ibov.to_csv('data/processed/ibov_retornos_simples.csv')
+print("\nRetornos salvos em 'data/processed/ibov_retornos_logaritmicos.csv' e 'data/processed/ibov_retornos_simples.csv' com sucesso!")
