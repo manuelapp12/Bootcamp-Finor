@@ -1,3 +1,4 @@
+streamlit>=1.35.0
 asttokens==3.0.1
 cvxpy==1.7.5
 attrs==26.1.0
