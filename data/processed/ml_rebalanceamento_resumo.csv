@@ -1,0 +1,4 @@
+Estratégia,TE_médio,Correlação_média,Retorno_carteira_%,Nº_rebalanceamentos
+Estática,0.2344,0.9726,3.71,0
+Sempre-Rebalanceia,0.1908,0.9766,2.97,5
+ML-Guiada,0.1923,0.9764,3.12,4
