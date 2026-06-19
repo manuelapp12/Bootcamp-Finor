@@ -1,0 +1,8 @@
+{
+  "K_escolhido": 30,
+  "n_acoes_universo": 55,
+  "tracking_error_medio_qp": 0.0023442705344994597,
+  "tracking_error_medio_enet": 0.009206067135820251,
+  "correlacao_media_qp": 0.9726303653571925,
+  "correlacao_media_enet": 0.8726073115612504
+}
