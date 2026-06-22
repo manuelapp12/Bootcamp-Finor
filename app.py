@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
-FINOR | Index Tracking IBOV — Dashboard de Storytelling
-Bootcamp de Introdução a Data Science · 2025
+FINOR | Index Tracking IBOV — Plataforma e Dashboard de Storytelling
 
 Execução:
     cd /caminho/para/Bootcamp-Finor
     streamlit run app.py
 """
 import json
+import io
+import os
+from datetime import datetime
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -15,32 +18,35 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import cvxpy as cp
+from sklearn.ensemble import RandomForestClassifier
+from fpdf import FPDF
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CONFIG
 # ══════════════════════════════════════════════════════════════════════════════
 st.set_page_config(
     page_title="FINOR | Index Tracking IBOV",
-    page_icon="📈",
+    page_icon="assets/finor_mark.png" if os.path.exists("assets/finor_mark.png") else None,
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CORES
+# CORES — identidade visual Finor (extraída de finor.tech)
 # ══════════════════════════════════════════════════════════════════════════════
-VERDE  = "#00a859"
-AZUL   = "#0057b7"
-OURO   = "#FFD700"
-BRANCO = "#e6edf3"
-CINZA  = "#8b949e"
-BG     = "#0d1117"
-BG2    = "#161b22"
-BORDA  = "#30363d"
+VERDE  = "#EE7F25"   # laranja primário da marca Finor (nomes de variável mantidos)
+AZUL   = "#6E7B8B"   # cinza-azulado neutro, usado em séries secundárias de gráficos
+OURO   = "#F2953A"   # laranja claro (gradiente da marca), usado para destaque
+BRANCO = "#F2F2F2"
+CINZA  = "#9A9A9A"
+BG     = "#0d0d0d"
+BG2    = "#1a1a1a"
+BORDA  = "#2a2a2a"
 
 # Versões RGBA para uso em propriedades Plotly (não aceita hex 8 dígitos)
-VERDE_A10 = "rgba(0, 168, 89, 0.10)"   # VERDE com 10% de opacidade
-VERDE_A07 = "rgba(0, 168, 89, 0.07)"   # VERDE com 7% de opacidade
+VERDE_A10 = "rgba(238, 127, 37, 0.10)"
+VERDE_A07 = "rgba(238, 127, 37, 0.07)"
+VERDE_A20 = "rgba(238, 127, 37, 0.20)"
 
 PLOTLY_BASE = dict(
     paper_bgcolor=BG,
@@ -94,13 +100,61 @@ section[data-testid="stSidebar"] {{
 }}
 .b-green {{ background: {VERDE}18; color: {VERDE}; border: 1px solid {VERDE}50; }}
 .b-gold  {{ background: {OURO}18;  color: {OURO};  border: 1px solid {OURO}50; }}
-.b-blue  {{ background: {AZUL}40;  color: #58a6ff; border: 1px solid #58a6ff50; }}
+.b-blue  {{ background: #6E7B8B40; color: #aab4bf; border: 1px solid #6E7B8B50; }}
 .kpi {{ text-align: center; padding: 14px 8px; }}
 .kpi-val {{ font-size: 1.9rem; font-weight: 700; color: {VERDE}; }}
 .kpi-lbl {{ font-size: 0.75rem; color: {CINZA}; margin-top: 3px; }}
+.ajuda, span.ajuda {{
+    cursor: help !important;
+    pointer-events: auto !important;
+    color: {CINZA};
+    font-size: 0.72rem;
+    border: 1px solid {CINZA};
+    border-radius: 50%;
+    width: 15px;
+    height: 15px;
+    min-width: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    vertical-align: middle;
+    user-select: none;
+}}
+.ajuda:hover {{
+    cursor: help !important;
+    border-color: {VERDE};
+    color: {VERDE};
+}}
 hr {{ border-color: {BORDA}; margin: 24px 0; }}
 </style>
 """, unsafe_allow_html=True)
+
+
+_TAMANHOS_TITULO = {
+    "####": ("1.05rem", "600"),
+    "###":  ("1.3rem",  "700"),
+    "##":   ("1.6rem",  "800"),
+    "":     ("0.95rem", "600"),
+}
+
+def titulo_ajuda(texto, tooltip, nivel="####"):
+    """Renderiza um título de seção/gráfico com um ícone de ajuda (?) ao lado,
+    que mostra uma explicação ao passar o mouse — sem depender de emojis.
+
+    Importante: isto NÃO usa sintaxe de cabeçalho markdown (#, ##, ...) porque
+    o Streamlit injeta automaticamente um link de âncora em cabeçalhos, o que
+    faz o ícone de ajuda (e o título) parecer "não clicável" ao passar o mouse.
+    Em vez disso, o título é simulado com um <div> estilizado.
+    """
+    tam, peso = _TAMANHOS_TITULO.get(nivel, _TAMANHOS_TITULO["####"])
+    st.markdown(
+        f"<div style='display:flex; align-items:center; gap:0; margin:0.3em 0 0.5em 0;'>"
+        f"<span style='font-size:{tam}; font-weight:{peso}; color:{BRANCO};'>{texto}</span>"
+        f"<span class='ajuda' title='{tooltip}'>?</span>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -137,7 +191,6 @@ def calcular_pesos_k(K: int) -> pd.Series:
     acoes  = [c for c in dados.columns if c != "IBOV"]
     X_tr   = treino[acoes].values
     y_tr   = treino["IBOV"].values
-    # Ranking via universo completo
     n      = len(acoes)
     w_all  = cp.Variable(n)
     cp.Problem(
@@ -158,6 +211,334 @@ def calcular_pesos_k(K: int) -> pd.Series:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# FUNÇÕES DA PLATAFORMA — recomendação de K, simulação, ML, persistência,
+# relatório PDF, projeções de Monte Carlo e monitoramento de regime/anomalias
+# ══════════════════════════════════════════════════════════════════════════════
+
+@st.cache_data(show_spinner=False)
+def recomendar_k(universo, treino_ini, treino_fim, cap_max):
+    """Recomenda o menor K cuja perda de precisão fique a até 10% do melhor
+    Tracking Error possível. Validado com um split interno 80/20 dentro do
+    próprio período de treino — nunca usa o período de teste do cliente,
+    para evitar viés (data leakage)."""
+    dados, _ = load_main()
+    janela = dados.loc[treino_ini:treino_fim]
+    universo = [a for a in universo if a in janela.columns]
+    n = len(universo)
+    if len(janela) < 40 or n < 5:
+        return min(30, n) if n else 10
+
+    corte = int(len(janela) * 0.8)
+    treino_int = janela.iloc[:corte]
+    valid_int  = janela.iloc[corte:]
+    if len(valid_int) < 10:
+        return min(30, n)
+
+    X_tr, y_tr = treino_int[universo].values, treino_int["IBOV"].values
+    w_all = cp.Variable(n)
+    cp.Problem(
+        cp.Minimize(cp.sum_squares(X_tr @ w_all - y_tr)),
+        [cp.sum(w_all) == 1, w_all >= 0, w_all <= cap_max],
+    ).solve(solver=cp.OSQP)
+    ranking = pd.Series(np.maximum(w_all.value, 0), index=universo).sort_values(ascending=False)
+
+    candidatos = sorted(set([k for k in [10, 15, 20, 25, 30, 40] if k < n] + [n]))
+    resultados = {}
+    for K in candidatos:
+        top = ranking.head(K).index.tolist()
+        cap_efetivo = max(cap_max, 1.0 / K)
+        w_k = cp.Variable(K)
+        cp.Problem(
+            cp.Minimize(cp.sum_squares(treino_int[top].values @ w_k - y_tr)),
+            [cp.sum(w_k) == 1, w_k >= 0, w_k <= cap_efetivo],
+        ).solve(solver=cp.OSQP)
+        if w_k.value is None:
+            continue
+        pesos_k = pd.Series(np.maximum(w_k.value, 0), index=top)
+        soma = pesos_k.sum()
+        if soma <= 0:
+            continue
+        pesos_k = pesos_k / soma
+        rc = valid_int[top].values @ pesos_k.values
+        ri = valid_int["IBOV"].values
+        resultados[K] = float(np.std(rc - ri))
+
+    if not resultados:
+        return min(30, n)
+    melhor_te = min(resultados.values())
+    candidatos_ok = [K for K, te in resultados.items() if te <= melhor_te * 1.10]
+    return min(candidatos_ok)
+
+
+@st.cache_data(show_spinner=False)
+def rodar_simulacao(universo, K, cap_max, treino_ini, treino_fim, teste_ini, teste_fim):
+    """Roda uma simulação completa: ranking por QP no universo escolhido,
+    seleção das K ações de maior peso, novo QP com restrição de concentração,
+    e avaliação fora da amostra no período de teste."""
+    dados, _ = load_main()
+    universo = [a for a in universo if a in dados.columns]
+    treino_j = dados.loc[treino_ini:treino_fim]
+    teste_j  = dados.loc[teste_ini:teste_fim]
+
+    if len(teste_j) == 0 or len(treino_j) < 30 or len(universo) < 5:
+        return {"teste_vazio": True}
+
+    n = len(universo)
+    X_tr, y_tr = treino_j[universo].values, treino_j["IBOV"].values
+    w_all = cp.Variable(n)
+    cp.Problem(
+        cp.Minimize(cp.sum_squares(X_tr @ w_all - y_tr)),
+        [cp.sum(w_all) == 1, w_all >= 0, w_all <= cap_max],
+    ).solve(solver=cp.OSQP)
+    ranking = pd.Series(np.maximum(w_all.value, 0), index=universo).sort_values(ascending=False)
+
+    K = int(np.clip(K, 1, n))
+    top = ranking.head(K).index.tolist()
+    cap_efetivo = max(cap_max, 1.0 / K)
+    w_k = cp.Variable(K)
+    cp.Problem(
+        cp.Minimize(cp.sum_squares(treino_j[top].values @ w_k - y_tr)),
+        [cp.sum(w_k) == 1, w_k >= 0, w_k <= cap_efetivo],
+    ).solve(solver=cp.OSQP)
+    if w_k.value is None:
+        return {"teste_vazio": True}
+    pesos = pd.Series(np.maximum(w_k.value, 0), index=top)
+    pesos = (pesos / pesos.sum()).sort_values(ascending=False)
+
+    rc = teste_j[top].values @ pesos.values
+    ri = teste_j["IBOV"].values
+    te = float(np.std(rc - ri))
+    corr = float(np.corrcoef(rc, ri)[0, 1]) if len(rc) > 1 else float("nan")
+    serie_carteira = pd.Series((1 + rc).cumprod(), index=teste_j.index)
+    serie_ibov     = pd.Series((1 + ri).cumprod(), index=teste_j.index)
+
+    return {
+        "teste_vazio": False,
+        "pesos": pesos,
+        "tracking_error": te,
+        "correlacao": corr,
+        "retorno_carteira_acum": float(serie_carteira.iloc[-1] - 1),
+        "retorno_ibov_acum": float(serie_ibov.iloc[-1] - 1),
+        "serie_carteira": serie_carteira,
+        "serie_ibov": serie_ibov,
+    }
+
+
+def gerar_sinal_ml(pesos, teste_ini, teste_fim):
+    """Treina um Random Forest com a mesma arquitetura validada offline
+    (LOOK=60, STEP=20, HORIZ=20, 7 features) usando apenas dados anteriores
+    ao início do teste, e aplica o sinal a cada dia do período de teste.
+    Retorna None se não houver histórico suficiente para treinar com segurança."""
+    dados, _ = load_main()
+    LOOK, STEP, HORIZ = 60, 20, 20
+    ativos = [a for a in pesos.index if a in dados.columns]
+    hist = dados.loc[:teste_ini].iloc[:-1]
+    if len(hist) < LOOK + HORIZ + STEP * 10:
+        return None
+
+    rc_h = hist[ativos].values @ pesos.loc[ativos].values
+    ri_h = hist["IBOV"].values
+    te_h = np.abs(rc_h - ri_h)
+
+    def feats_em(i, mediana_ref):
+        janela = te_h[i - LOOK:i]
+        return [
+            float(np.mean(janela[-20:])),
+            float(np.mean(janela)),
+            float(np.std(janela[-20:])),
+            float(np.std(ri_h[i - 20:i])),
+            float(np.mean(ri_h[i - 20:i])),
+            float(np.corrcoef(rc_h[i - 20:i], ri_h[i - 20:i])[0, 1]),
+            float(np.sum(janela > mediana_ref)),
+        ]
+
+    X_ml, y_ml = [], []
+    for i in range(LOOK, len(te_h) - HORIZ, STEP):
+        mediana_ref = np.median(te_h[:i])
+        X_ml.append(feats_em(i, mediana_ref))
+        y_ml.append(1 if np.mean(te_h[i:i + HORIZ]) > mediana_ref else 0)
+
+    if len(X_ml) < 20:
+        return None
+    X_ml, y_ml = np.array(X_ml), np.array(y_ml)
+    rf = RandomForestClassifier(n_estimators=200, max_depth=4, min_samples_leaf=3, random_state=42)
+    rf.fit(X_ml, y_ml)
+    mediana_geral = float(np.median(te_h))
+
+    teste_j = dados.loc[teste_ini:teste_fim]
+    sinais = []
+    for data_corte in teste_j.index:
+        janela_hist = dados.loc[:data_corte].iloc[-LOOK - 1:-1]
+        if len(janela_hist) < LOOK:
+            continue
+        rc_w = janela_hist[ativos].values @ pesos.loc[ativos].values
+        ri_w = janela_hist["IBOV"].values
+        te_w = np.abs(rc_w - ri_w)
+        feats_live = np.array([[
+            float(np.mean(te_w[-20:])), float(np.mean(te_w)),
+            float(np.std(te_w[-20:])), float(np.std(ri_w[-20:])),
+            float(np.mean(ri_w[-20:])),
+            float(np.corrcoef(rc_w[-20:], ri_w[-20:])[0, 1]),
+            float(np.sum(te_w > mediana_geral)),
+        ]])
+        sinais.append({"data": data_corte, "sinal": int(rf.predict(feats_live)[0])})
+
+    return {"sinais": sinais, "n_treino": len(X_ml)}
+
+
+HIST_FILE = "data/processed/historico_simulacoes_cliente.json"
+
+def carregar_historico_persistente():
+    if not os.path.exists(HIST_FILE):
+        return []
+    try:
+        with open(HIST_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return []
+
+def registrar_simulacao(resultado, lote_id=None):
+    historico = carregar_historico_persistente()
+    pesos = resultado["pesos"]
+    entrada = {
+        "id": datetime.now().strftime("%Y%m%d%H%M%S%f"),
+        "timestamp": datetime.now().isoformat(),
+        "lote_id": lote_id,
+        "K": resultado.get("K"),
+        "tracking_error": resultado["tracking_error"],
+        "correlacao": resultado["correlacao"],
+        "retorno_carteira_acum": resultado["retorno_carteira_acum"],
+        "retorno_ibov_acum": resultado["retorno_ibov_acum"],
+        "params": resultado.get("params", {}),
+        "pesos": {k: float(v) for k, v in pesos.items()},
+    }
+    historico.append(entrada)
+    with open(HIST_FILE, "w", encoding="utf-8") as f:
+        json.dump(historico, f, ensure_ascii=False, indent=2)
+
+
+def _pdf_safe(texto):
+    substituicoes = {
+        "—": "-", "–": "-", "“": '"', "”": '"', "‘": "'", "’": "'", "…": "...", "•": "-",
+    }
+    for k, v in substituicoes.items():
+        texto = texto.replace(k, v)
+    return texto.encode("latin-1", errors="replace").decode("latin-1")
+
+def gerar_pdf_relatorio(resultado):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.set_text_color(238, 127, 37)
+    pdf.cell(0, 12, _pdf_safe("FINOR - Relatorio de Simulacao de Index Tracking"), new_x="LMARGIN", new_y="NEXT")
+    pdf.set_text_color(40, 40, 40)
+    pdf.set_font("Helvetica", "", 9)
+    pdf.cell(0, 7, _pdf_safe(f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}"), new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 8, _pdf_safe("Parametros da simulacao"), new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 10)
+    params = resultado.get("params", {})
+    for linha in [
+        f"Numero de acoes (K): {resultado.get('K', '-')}",
+        f"Universo: {params.get('universo_n', '-')} acoes candidatas",
+        f"Concentracao maxima por ativo: {params.get('cap', 0):.0%}",
+        f"Janela de treino: {params.get('janela_anos', '-')} ano(s)",
+        f"Frequencia de rebalanceamento: {params.get('freq_reb', '-')}",
+        f"Periodo de treino: {params.get('treino', '-')}",
+        f"Periodo de teste: {params.get('teste', '-')}",
+    ]:
+        pdf.cell(0, 6, _pdf_safe(linha), new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 8, _pdf_safe("Resultados"), new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 10)
+    for linha in [
+        f"Tracking Error: {resultado['tracking_error']*100:.4f}%",
+        f"Correlacao com IBOV: {resultado['correlacao']:.2%}",
+        f"Retorno da carteira no periodo: {resultado['retorno_carteira_acum']:.2%}",
+        f"Retorno do IBOV no periodo: {resultado['retorno_ibov_acum']:.2%}",
+    ]:
+        pdf.cell(0, 6, _pdf_safe(linha), new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 8, _pdf_safe("Composicao da carteira"), new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 9)
+    for ativo, peso in resultado["pesos"].sort_values(ascending=False).items():
+        pdf.cell(0, 5.5, _pdf_safe(f"{ativo.replace('.SA','')}: {peso*100:.2f}%"), new_x="LMARGIN", new_y="NEXT")
+
+    return bytes(pdf.output())
+
+
+def montecarlo_projecao(pesos, horizonte, n_sim, bloco, seed=42):
+    """Block bootstrap: reamostra blocos contíguos do histórico real de
+    divergência (carteira - IBOV) para projetar cenários futuros plausíveis,
+    preservando parte da autocorrelação real do mercado."""
+    dados, _ = load_main()
+    ativos = [a for a in pesos.index if a in dados.columns]
+    rc_hist = dados[ativos].values @ pesos.loc[ativos].values
+    ri_hist = dados["IBOV"].values
+    diff_hist = rc_hist - ri_hist
+
+    rng = np.random.default_rng(seed)
+    n = len(diff_hist)
+    caminhos = np.zeros((n_sim, horizonte))
+    for s in range(n_sim):
+        dias = []
+        while len(dias) < horizonte:
+            inicio = rng.integers(0, max(1, n - bloco))
+            dias.extend(diff_hist[inicio:inicio + bloco])
+        caminhos[s] = np.cumsum(dias[:horizonte])
+
+    percentis_diff = {p: np.percentile(caminhos, p, axis=0) for p in [5, 25, 50, 75, 95]}
+    te_hist = float(np.std(diff_hist))
+    limite = 2 * te_hist * np.sqrt(horizonte)
+    prob_divergencia = float(np.mean(np.abs(caminhos[:, -1]) > limite))
+
+    return {
+        "horizonte": horizonte, "n_sim": n_sim, "bloco": bloco,
+        "percentis_diff": percentis_diff, "prob_divergencia": prob_divergencia,
+    }
+
+
+def detectar_regime_anomalias(pesos):
+    """Classifica o regime de volatilidade atual do IBOV (limiares sobre a
+    volatilidade móvel) e detecta anomalias de tracking error via z-score
+    (|z| > 3) na série de erro absoluto diário da carteira."""
+    dados, _ = load_main()
+    ativos = [a for a in pesos.index if a in dados.columns]
+    rc = dados[ativos].values @ pesos.loc[ativos].values
+    ri = dados["IBOV"].values
+    te_abs = pd.Series(np.abs(rc - ri), index=dados.index)
+
+    vol_ibov_20d = (dados["IBOV"].rolling(20).std() * np.sqrt(252) * 100).dropna()
+    vol_mediana = float(vol_ibov_20d.median()) if len(vol_ibov_20d) else None
+    vol_atual = float(vol_ibov_20d.iloc[-1]) if len(vol_ibov_20d) else None
+
+    if vol_atual is None or vol_mediana is None:
+        regime_atual = "Indefinido"
+    elif vol_atual < vol_mediana * 0.75:
+        regime_atual = "Calmo"
+    elif vol_atual > vol_mediana * 1.35:
+        regime_atual = "Volátil"
+    else:
+        regime_atual = "Normal"
+
+    media_te = te_abs.rolling(60, min_periods=20).mean()
+    std_te = te_abs.rolling(60, min_periods=20).std().replace(0, np.nan)
+    z = (te_abs - media_te) / std_te
+    anomalias = te_abs[z.abs() > 3].dropna()
+
+    return {
+        "regime_atual": regime_atual, "vol_atual": vol_atual, "vol_mediana": vol_mediana,
+        "vol_ibov_20d": vol_ibov_20d, "te_abs": te_abs, "anomalias": anomalias,
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # SIDEBAR
 # ══════════════════════════════════════════════════════════════════════════════
 JANELAS = [
@@ -166,38 +547,58 @@ JANELAS = [
     ("2025-02-01","2025-04-30"),
 ]
 SECOES = [
-    "🏠  Capa",
-    "1 —  O Problema",
-    "2 —  Os Dados",
-    "3 —  O Modelo (QP)",
-    "4 —  Backtest",
-    "5 —  Trade-off de Cardinalidade",
-    "6 —  ML de Rebalanceamento",
-    "7 —  Recomendação Final",
+    "Capa",
+    "1 — O Problema",
+    "2 — Os Dados",
+    "3 — O Modelo (QP)",
+    "4 — Backtest",
+    "5 — Trade-off de Cardinalidade",
+    "6 — ML de Rebalanceamento",
+    "7 — Recomendação Final",
 ]
 
 with st.sidebar:
+    if os.path.exists("assets/finor_mark.png"):
+        c_logo1, c_logo2, c_logo3 = st.columns([1, 1, 1])
+        with c_logo2:
+            st.image("assets/finor_mark.png", width=36)
     st.markdown(f"""
-    <div style='text-align:center; padding:14px 0 10px 0;'>
-        <div style='font-size:2.2rem'>📈</div>
-        <div style='font-weight:700; font-size:1.05rem; color:{BRANCO}'>FINOR</div>
-        <div style='font-size:0.72rem; color:{CINZA}'>Index Tracking · Bootcamp 2025</div>
+    <div style='text-align:center; padding:2px 0 10px 0;'>
+        <div style='font-weight:700; font-size:1.05rem; letter-spacing:1px; color:{BRANCO}'>FINOR</div>
+        <div style='font-size:0.72rem; color:{CINZA}'>Index Tracking · Plataforma</div>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("---")
-    secao = st.radio("", SECOES, label_visibility="hidden")
-    idx_s = SECOES.index(secao)
-    pct   = int(idx_s / (len(SECOES) - 1) * 100) if idx_s > 0 else 0
-    st.markdown(
-        f"<div style='height:3px; width:{pct}%; background:linear-gradient(90deg,{VERDE},#00d4aa);"
-        f"border-radius:2px; margin:4px 0 6px 0'></div>"
-        f"<small style='color:{CINZA}'>Capítulo {idx_s}/{len(SECOES)-1}</small>",
-        unsafe_allow_html=True,
+
+    area = st.radio(
+        "Área", ["Sobre o Projeto", "Plataforma"],
+        label_visibility="hidden",
+        help="\"Sobre o Projeto\" apresenta a metodologia em formato de história. "
+             "\"Plataforma\" é a ferramenta interativa para simular carteiras.",
     )
     st.markdown("---")
+
+    if area == "Sobre o Projeto":
+        secao = st.radio("", SECOES, label_visibility="hidden")
+        idx_s = SECOES.index(secao)
+        pct   = int(idx_s / (len(SECOES) - 1) * 100) if idx_s > 0 else 0
+        st.markdown(
+            f"<div style='height:3px; width:{pct}%; background:linear-gradient(90deg,{VERDE},{OURO});"
+            f"border-radius:2px; margin:4px 0 6px 0'></div>"
+            f"<small style='color:{CINZA}'>Seção {idx_s}/{len(SECOES)-1}</small>",
+            unsafe_allow_html=True,
+        )
+    else:
+        secao = ""
+        st.markdown(
+            f"<small style='color:{CINZA}'>Navegue pelas abas no topo da tela</small>",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("---")
     st.markdown(
-        f"<small style='color:{CINZA}'>🗓 2018–2025 · B3 / Yahoo Finance<br>"
-        f"🛠 Python · cvxpy · scikit-learn<br>📊 Plotly · Streamlit</small>",
+        f"<small style='color:{CINZA}'>2018–2025 · B3 / Yahoo Finance<br>"
+        f"Python · cvxpy · scikit-learn · Plotly · Streamlit</small>",
         unsafe_allow_html=True,
     )
 
@@ -212,12 +613,12 @@ treino = dados.loc[:"2024-01-31"]
 # ══════════════════════════════════════════════════════════════════════════════
 # 0 — CAPA
 # ══════════════════════════════════════════════════════════════════════════════
-if "Capa" in secao:
+if area == "Sobre o Projeto" and "Capa" in secao:
     st.markdown(f"""
     <div style='padding:56px 0 28px 0; text-align:center;'>
         <div style='font-size:0.85rem; color:{CINZA}; letter-spacing:4px;
                     text-transform:uppercase; margin-bottom:14px;'>
-            Bootcamp de Introdução a Data Science · 2025
+            FINOR · Index Tracking
         </div>
         <h1 style='font-size:3rem; font-weight:900; margin:0 0 10px 0;
                    background:linear-gradient(135deg,{VERDE},{OURO});
@@ -262,18 +663,17 @@ if "Capa" in secao:
     st.markdown("### Estrutura da apresentação")
     cols = st.columns(7)
     etapas = [
-        ("📋", "O Problema", "Desafio do cliente"),
-        ("📊", "Os Dados", "IBOV + 54 ações · 7a"),
-        ("🔧", "O Modelo", "Prog. Quadrática"),
-        ("📈", "Backtest", "5 janelas OOS"),
-        ("⚖️", "Trade-off", "Slider interativo"),
-        ("🤖", "ML", "Random Forest"),
-        ("🎯", "Recomendação", "Decisão estratégica"),
+        ("O Problema", "Desafio do cliente"),
+        ("Os Dados", "IBOV + 54 ações · 7a"),
+        ("O Modelo", "Prog. Quadrática"),
+        ("Backtest", "5 janelas OOS"),
+        ("Trade-off", "Slider interativo"),
+        ("ML", "Random Forest"),
+        ("Recomendação", "Decisão estratégica"),
     ]
-    for col, (icon, nome, desc) in zip(cols, etapas):
+    for col, (nome, desc) in zip(cols, etapas):
         col.markdown(
             f"<div class='card' style='text-align:center; padding:14px 6px;'>"
-            f"<div style='font-size:1.7rem; margin-bottom:6px'>{icon}</div>"
             f"<div style='font-weight:700; font-size:0.82rem; color:{BRANCO}'>{nome}</div>"
             f"<div style='font-size:0.68rem; color:{CINZA}; margin-top:4px'>{desc}</div>"
             f"</div>",
@@ -284,7 +684,7 @@ if "Capa" in secao:
 # ══════════════════════════════════════════════════════════════════════════════
 # 1 — O PROBLEMA
 # ══════════════════════════════════════════════════════════════════════════════
-elif "Problema" in secao:
+elif area == "Sobre o Projeto" and "Problema" in secao:
     st.markdown("<div class='chapter-num'>01</div>", unsafe_allow_html=True)
     st.title("O Problema do Cliente")
 
@@ -310,6 +710,11 @@ elif "Problema" in secao:
         """)
 
     with col2:
+        titulo_ajuda(
+            "Retorno acumulado do IBOV",
+            "Mostra como R$1 investido no índice cresceria ao longo do tempo, "
+            "multiplicando (1 + retorno diário) dia após dia desde 2018.",
+        )
         ibov_acum = (1 + dados["IBOV"]).cumprod()
         fig = go.Figure()
         fig.add_trace(go.Scatter(
@@ -318,22 +723,21 @@ elif "Problema" in secao:
             line=dict(color=VERDE, width=2), name="IBOV",
         ))
         fig.update_layout(
-            **PLOTLY_BASE, title="IBOV — Retorno acumulado (2018–2025)",
-            height=330, xaxis_title="", yaxis_title="Base 1.0", showlegend=False,
+            **PLOTLY_BASE, height=330, xaxis_title="", yaxis_title="Base 1.0", showlegend=False,
         )
         st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("<hr>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-    c1.success("📐 **Modelo matemático** que seleciona as ações e calcula pesos ótimos automaticamente")
-    c2.success("📊 **Backtest rigoroso** em 5 períodos que o modelo nunca viu — validação honesta")
-    c3.success("🤖 **ML de rebalanceamento** que decide quando atualizar a carteira com inteligência")
+    c1.success("**Modelo matemático** que seleciona as ações e calcula pesos ótimos automaticamente")
+    c2.success("**Backtest rigoroso** em 5 períodos que o modelo nunca viu — validação honesta")
+    c3.success("**ML de rebalanceamento** que decide quando atualizar a carteira com inteligência")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 2 — OS DADOS
 # ══════════════════════════════════════════════════════════════════════════════
-elif "Dados" in secao:
+elif area == "Sobre o Projeto" and "Dados" in secao:
     st.markdown("<div class='chapter-num'>02</div>", unsafe_allow_html=True)
     st.title("Os Dados")
 
@@ -343,7 +747,7 @@ elif "Dados" in secao:
     c3.metric("Dias úteis", f"{len(dados):,}")
     c4.metric("Ações candidatas", f"{len(acoes)}")
 
-    tab1, tab2, tab3 = st.tabs(["📈 IBOV", "🏦 Universo de ações", "🔗 Correlações"])
+    tab1, tab2, tab3 = st.tabs(["IBOV", "Universo de ações", "Correlações"])
 
     with tab1:
         col1, col2 = st.columns(2)
@@ -419,7 +823,7 @@ elif "Dados" in secao:
 # ══════════════════════════════════════════════════════════════════════════════
 # 3 — O MODELO QP
 # ══════════════════════════════════════════════════════════════════════════════
-elif "Modelo" in secao:
+elif area == "Sobre o Projeto" and "Modelo" in secao:
     st.markdown("<div class='chapter-num'>03</div>", unsafe_allow_html=True)
     st.title("O Modelo — Programação Quadrática (QP)")
 
@@ -471,7 +875,11 @@ elif "Modelo" in secao:
     c2.success("**Ranking:** QP no universo completo gera importância de cada ação por peso ótimo")
     c3.success("**Cardinalidade:** K=5 a 54 testados — escolhemos o menor K dentro de 10% do melhor TE")
 
-    st.markdown("#### Carteira final otimizada — K = 30 ações")
+    titulo_ajuda(
+        "Carteira final otimizada — K = 30 ações",
+        "Peso de cada ação na carteira resolvida pelo QP. Barras em laranja claro "
+        "indicam posições acima do peso médio da carteira.",
+    )
     pq = pesos_qp.copy()
     pq.index = pq.index.str.replace(".SA", "")
     cores_bar = [OURO if v > pq["peso"].mean() else VERDE for v in pq["peso"].values]
@@ -482,8 +890,9 @@ elif "Modelo" in secao:
         textposition="outside",
         hovertemplate="%{y}: %{x:.2f}%<extra></extra>",
     ))
+    _base_sem_yaxis = {k: v for k, v in PLOTLY_BASE.items() if k != "yaxis"}
     fig.update_layout(
-        **PLOTLY_BASE, height=640,
+        **_base_sem_yaxis, height=640,
         xaxis_title="Peso na carteira (%)",
         yaxis=dict(**PLOTLY_BASE["yaxis"], autorange="reversed"),
         title="Alocação ótima — carteira QP com K=30",
@@ -495,7 +904,7 @@ elif "Modelo" in secao:
 # ══════════════════════════════════════════════════════════════════════════════
 # 4 — BACKTEST
 # ══════════════════════════════════════════════════════════════════════════════
-elif "Backtest" in secao:
+elif area == "Sobre o Projeto" and "Backtest" in secao:
     st.markdown("<div class='chapter-num'>04</div>", unsafe_allow_html=True)
     st.title("Backtest — Validação Fora da Amostra")
 
@@ -515,7 +924,11 @@ elif "Backtest" in secao:
     c4.metric("Correlação média · E.Net", f"{en_bt['correlacao'].mean():.2%}")
 
     st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown("#### Retorno acumulado — 5 janelas de teste")
+    titulo_ajuda(
+        "Retorno acumulado — 5 janelas de teste",
+        "Cada painel é um trimestre fora da amostra. Compara o crescimento de "
+        "R$1 na carteira QP, no IBOV e no Elastic Net dentro daquele período.",
+    )
 
     fig2 = make_subplots(
         rows=1, cols=5,
@@ -543,12 +956,13 @@ elif "Backtest" in secao:
         ), row=1, col=k + 1)
         fig2.add_trace(go.Scatter(
             x=df_t.index, y=(1 + rc_en).cumprod(),
-            line=dict(color=OURO, width=1.5, dash="dash"),
+            line=dict(color=AZUL, width=1.5, dash="dash"),
             name="Elastic Net", showlegend=(k == 0),
         ), row=1, col=k + 1)
 
+    _base_sem_legend = {k: v for k, v in PLOTLY_BASE.items() if k != "legend"}
     fig2.update_layout(
-        **PLOTLY_BASE, height=380,
+        **_base_sem_legend, height=380,
         legend=dict(orientation="h", yanchor="bottom", y=1.08, x=0.5, xanchor="center"),
     )
     for i in range(1, 6):
@@ -582,13 +996,13 @@ elif "Backtest" in secao:
             use_container_width=True, hide_index=True,
         )
         vant = (en_bt["tracking_error"].mean() / qp_bt["tracking_error"].mean() - 1) * 100
-        st.success(f"✅ O modelo QP tem Tracking Error **{vant:.0f}% menor** que o Elastic Net.")
+        st.success(f"O modelo QP tem Tracking Error **{vant:.0f}% menor** que o Elastic Net.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 5 — TRADE-OFF DE CARDINALIDADE
 # ══════════════════════════════════════════════════════════════════════════════
-elif "Trade-off" in secao:
+elif area == "Sobre o Projeto" and "Trade-off" in secao:
     st.markdown("<div class='chapter-num'>05</div>", unsafe_allow_html=True)
     st.title("Trade-off — Quantas Ações Usar?")
 
@@ -603,18 +1017,20 @@ elif "Trade-off" in secao:
     with col_ctrl:
         K_sel = st.select_slider(
             "Número de ações (K):", options=Ks_disp, value=20,
-            help="Mova para ver o impacto na precisão de replicação do IBOV",
+            help="Quantas ações a carteira terá. Menos ações = mais simples e "
+                 "barato de operar, porém maior erro de réplica (Tracking Error) "
+                 "em relação ao IBOV.",
         )
         row_k     = card[card["K"] == K_sel].iloc[0]
         te_val    = float(row_k["TE_medio_oos"])
         custo_val = float(row_k["custo_reducao_%TE"])
 
         if custo_val <= 10:
-            cor_c, label_c = VERDE,    "✅ Excelente"
+            cor_c, label_c = VERDE,    "Excelente"
         elif custo_val <= 22:
-            cor_c, label_c = OURO,     "⚠️ Aceitável"
+            cor_c, label_c = OURO,     "Aceitável"
         else:
-            cor_c, label_c = "#ff4b4b","❌ Custo elevado"
+            cor_c, label_c = "#ff4b4b","Custo elevado"
 
         st.markdown(f"""
         <div class='card' style='text-align:center; margin-top:12px;'>
@@ -634,11 +1050,16 @@ elif "Trade-off" in secao:
         """, unsafe_allow_html=True)
 
     with col_chart:
-        # Curva de eficiência
+        titulo_ajuda(
+            "Curva de eficiência",
+            "Cada ponto é um K testado em backtest fora da amostra. A estrela "
+            "marca o K escolhido no controle ao lado. Quanto mais à esquerda e "
+            "mais baixo, melhor o equilíbrio entre simplicidade e precisão.",
+        )
         fig = go.Figure()
         fig.add_vrect(
             x0=24, x1=32, fillcolor=VERDE, opacity=0.07, line_width=0,
-            annotation_text="⭐ Zona recomendada", annotation_position="top left",
+            annotation_text="Zona recomendada", annotation_position="top left",
             annotation_font_color=VERDE, annotation_font_size=10,
         )
         marker_colors = [OURO if k == K_sel else VERDE for k in card["K"]]
@@ -661,14 +1082,13 @@ elif "Trade-off" in secao:
         )
         fig.update_layout(
             **PLOTLY_BASE, height=360,
-            title=f"Curva de Eficiência — K={K_sel} destacado (estrela dourada)",
+            title=f"Curva de Eficiência — K={K_sel} destacado",
             xaxis_title="Número de ações (K)",
             yaxis_title="Tracking Error médio OOS (%)",
             showlegend=False,
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    # Composição dinâmica
     st.markdown(f"#### Composição ótima com **K = {K_sel} ações**")
     with st.spinner(f"Calculando pesos QP para K={K_sel}..."):
         pesos_k = calcular_pesos_k(K_sel)
@@ -709,7 +1129,7 @@ elif "Trade-off" in secao:
 # ══════════════════════════════════════════════════════════════════════════════
 # 6 — ML DE REBALANCEAMENTO
 # ══════════════════════════════════════════════════════════════════════════════
-elif "ML" in secao:
+elif area == "Sobre o Projeto" and "ML" in secao:
     st.markdown("<div class='chapter-num'>06</div>", unsafe_allow_html=True)
     st.title("ML de Rebalanceamento — Random Forest")
 
@@ -739,6 +1159,11 @@ elif "ML" in secao:
         fi["Feature"] = fi["Feature"].map(lambda x: feat_labels.get(x, x))
         fi = fi.sort_values("Importância")
 
+        titulo_ajuda(
+            "Quais sinais o modelo observa?",
+            "Importância (Gini) de cada variável usada pelo Random Forest para "
+            "decidir se vale a pena rebalancear a carteira.",
+        )
         fig = go.Figure(go.Bar(
             x=fi["Importância"], y=fi["Feature"],
             orientation="h",
@@ -752,7 +1177,6 @@ elif "ML" in secao:
         ))
         fig.update_layout(
             **PLOTLY_BASE, height=320,
-            title="Quais sinais o modelo observa?",
             xaxis_title="Importância (Gini)",
             showlegend=False,
         )
@@ -762,7 +1186,7 @@ elif "ML" in secao:
         st.markdown("#### 3 estratégias comparadas")
         cores_strat = {
             "Estática":          CINZA,
-            "Sempre-Rebalanceia": "#58a6ff",
+            "Sempre-Rebalanceia": AZUL,
             "ML-Guiada":         VERDE,
         }
         for _, row in ml_res.iterrows():
@@ -799,12 +1223,12 @@ elif "ML" in secao:
     dif_ml  = abs(te_ml - te_semp) / te_semp * 100
 
     c1, c2, c3 = st.columns(3)
-    c1.metric("Redução de TE (ML vs Estática)",      f"{red:.1f}%",  "↓ melhora")
-    c2.metric("Diferença ML vs Sempre-Rebalanceia",  f"{dif_ml:.2f}%","≈ equivalente")
+    c1.metric("Redução de TE (ML vs Estática)",      f"{red:.1f}%",  "melhora")
+    c2.metric("Diferença ML vs Sempre-Rebalanceia",  f"{dif_ml:.2f}%","equivalente")
     c3.metric("Rebalanceamentos poupados",            "1",            "ML vs Sempre-Rebalanceia")
 
     st.info(
-        "💡 **Descoberta principal:** qualquer rebalanceamento reduz o tracking error em ~18%. "
+        "**Descoberta principal:** qualquer rebalanceamento reduz o tracking error em ~18%. "
         "A estratégia **ML-Guiada** alcança o mesmo resultado que 'Sempre-Rebalanceia' "
         "com **1 evento a menos** — menor custo operacional e transacional."
     )
@@ -822,7 +1246,7 @@ elif "ML" in secao:
 # ══════════════════════════════════════════════════════════════════════════════
 # 7 — RECOMENDAÇÃO FINAL
 # ══════════════════════════════════════════════════════════════════════════════
-elif "Recomendação" in secao:
+elif area == "Sobre o Projeto" and "Recomendação" in secao:
     st.markdown("<div class='chapter-num'>07</div>", unsafe_allow_html=True)
     st.title("Recomendação Final")
 
@@ -834,20 +1258,20 @@ elif "Recomendação" in secao:
     c1, c2, c3 = st.columns(3)
     perfis = [
         (CINZA,   "K = 15–20",   "ETF simplificado · Carteira piloto", False,
-         ["✅ Mais simples de gerir",
-          "⚡ Custo operacional mínimo",
-          "⚠️ TE +19–22% acima do ideal",
-          "📉 Correlação ~95–96% com IBOV"]),
-        (OURO,    "K = 25–30 ⭐","Fundo varejo — equilíbrio ideal", True,
-         ["✅ Melhor custo-benefício comprovado",
-          "✅ TE apenas +7–12% acima do ideal",
-          "✅ Correlação ~97% com IBOV",
-          "✅ Gestão ainda acessível"]),
+         ["Mais simples de gerir",
+          "Custo operacional mínimo",
+          "TE +19–22% acima do ideal",
+          "Correlação ~95–96% com IBOV"]),
+        (OURO,    "K = 25–30",   "Fundo varejo — equilíbrio ideal", True,
+         ["Melhor custo-benefício comprovado",
+          "TE apenas +7–12% acima do ideal",
+          "Correlação ~97% com IBOV",
+          "Gestão ainda acessível"]),
         (AZUL,    "K = 40–54",   "Fundo institucional — máxima precisão", False,
-         ["✅ Mínimo tracking error possível",
-          "✅ Correlação 97.7% com IBOV",
-          "⚠️ Maior custo de transação",
-          "⚠️ Mais ações para gerir"]),
+         ["Mínimo tracking error possível",
+          "Correlação 97.7% com IBOV",
+          "Maior custo de transação",
+          "Mais ações para gerir"]),
     ]
     for col, (cor, titulo, sub, dest, itens) in zip([c1, c2, c3], perfis):
         borda = f"border: 2px solid {cor};" if dest else f"border: 1px solid {BORDA};"
@@ -866,13 +1290,13 @@ elif "Recomendação" in secao:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("#### ✅ O que foi entregue")
+        st.markdown("#### O que foi entregue")
         entregues = [
-            ("🔧 Modelo QP",           "Mínimo tracking error, solver open-source (OSQP), sem licença"),
-            ("📊 Backtest rigoroso",    "5 janelas trimestrais 100% fora da amostra"),
-            ("⚖️ Análise de trade-off", "11 tamanhos de carteira (K=5 a 54) testados"),
-            ("🤖 ML de rebalanceamento","Random Forest reduz TE em ~18% com intervenções mínimas"),
-            ("📉 Benchmark comparativo","Elastic Net superado em todos os critérios pelo modelo QP"),
+            ("Modelo QP",            "Mínimo tracking error, solver open-source (OSQP), sem licença"),
+            ("Backtest rigoroso",    "5 janelas trimestrais 100% fora da amostra"),
+            ("Análise de trade-off", "11 tamanhos de carteira (K=5 a 54) testados"),
+            ("ML de rebalanceamento","Random Forest reduz TE em ~18% com intervenções mínimas"),
+            ("Benchmark comparativo","Elastic Net superado em todos os critérios pelo modelo QP"),
         ]
         for nome, desc in entregues:
             st.markdown(
@@ -884,7 +1308,7 @@ elif "Recomendação" in secao:
             )
 
     with col2:
-        st.markdown("#### 🔭 Próximos passos sugeridos")
+        st.markdown("#### Próximos passos sugeridos")
         proximos = [
             "Rebalanceamento dinâmico de K por regime de mercado",
             "MIQP com cardinalidade explícita (variáveis binárias, Gurobi/CPLEX)",
@@ -927,14 +1351,14 @@ elif "Recomendação" in secao:
         f"<div style='text-align:center; padding:22px; background:{BG2}; border-radius:12px;"
         f"border:1px solid {VERDE}40;'>"
         f"<div style='font-size:1.05rem; font-weight:600; color:{VERDE}'>"
-        f"🎓 Projeto desenvolvido no Bootcamp de Introdução a Data Science — FINOR 2025</div>"
+        f"FINOR — Index Tracking do IBOV</div>"
         f"<div style='font-size:0.82rem; color:{CINZA}; margin-top:6px'>"
         f"Dados: B3 / Yahoo Finance · 2018–2025 · Python · cvxpy · scikit-learn · Streamlit · Plotly"
         f"</div></div>",
         unsafe_allow_html=True,
     )
 
-    st.markdown("#### 📚 Referências")
+    st.markdown("#### Referências")
     st.markdown(
         f"<div style='color:{CINZA}; font-size:0.83rem; line-height:2.1;'>"
         "Cornuejols, G.; Tütüncü, R. <em>Optimization Methods in Finance</em>. Cambridge University Press, 2006.<br>"
@@ -947,3 +1371,656 @@ elif "Recomendação" in secao:
         "</div>",
         unsafe_allow_html=True,
     )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PLATAFORMA — experiência reativa em abas
+# ══════════════════════════════════════════════════════════════════════════════
+if area == "Plataforma":
+    st.title("Plataforma de Index Tracking")
+    st.caption(
+        "Ajuste os parâmetros à esquerda e veja os resultados mudarem ao vivo, na "
+        "mesma tela — sem precisar clicar em \"rodar\" ou trocar de página."
+    )
+
+    tab_sim, tab_comp, tab_proj, tab_monit = st.tabs([
+        "Simulador", "Comparar Cenários", "Projeções Futuras", "Monitoramento",
+    ])
+
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 1 — SIMULADOR (Configurador + Resultados mesclados, 100% reativo)
+    # ══════════════════════════════════════════════════════════════════════
+    with tab_sim:
+        ctrl, resu = st.columns([1, 2], gap="large")
+
+        with ctrl:
+            st.markdown("##### Parâmetros")
+
+            modo_universo = st.segmented_control(
+                "Universo de ações", ["Todas as 54", "Selecionar"],
+                default="Todas as 54", key="sim_modo_universo",
+                help="Define se a otimização considera todas as 54 ações candidatas "
+                     "ou apenas um subconjunto escolhido por você.",
+            ) or "Todas as 54"
+            if modo_universo == "Selecionar":
+                sel_curto = st.multiselect(
+                    "Ações candidatas:",
+                    options=[a.replace(".SA", "") for a in acoes],
+                    default=[a.replace(".SA", "") for a in acoes[:30]],
+                    key="sim_universo_manual",
+                    help="Apenas as ações marcadas aqui entram no ranking e na "
+                         "otimização da carteira.",
+                )
+                universo_sel = [a + ".SA" for a in sel_curto]
+            else:
+                universo_sel = list(acoes)
+            st.caption(f"{len(universo_sel)} ações no universo.")
+
+            n_max_k = max(5, len(universo_sel))
+            if "sim_K_pendente" in st.session_state:
+                st.session_state["sim_K"] = int(np.clip(st.session_state.pop("sim_K_pendente"), 5, n_max_k))
+            colk1, colk2 = st.columns([3, 1])
+            with colk1:
+                K_sel = st.slider(
+                    "Número de ações (K)", 5, n_max_k,
+                    value=min(int(st.session_state.get("sim_K", 30)), n_max_k),
+                    key="sim_K",
+                    help="Quantas ações a carteira final terá. Menos ações = mais "
+                         "simples e barato de operar; mais ações = tende a reduzir "
+                         "o Tracking Error.",
+                )
+            with colk2:
+                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                sugerir = st.button("Sugerir K", use_container_width=True,
+                                     help="Busca o menor K com erro próximo do melhor possível, "
+                                          "validado dentro do próprio período de treino.")
+
+            perfil_risco = st.segmented_control(
+                "Perfil de risco", ["Conservador", "Moderado", "Agressivo"],
+                default="Moderado", key="sim_perfil",
+                help="Controla a concentração máxima permitida por ativo na carteira: "
+                     "Conservador = até 15%, Moderado = até 25%, Agressivo = até 40%.",
+            ) or "Moderado"
+            cap_sugerido = {"Conservador": 0.15, "Moderado": 0.25, "Agressivo": 0.40}[perfil_risco]
+            st.caption(f"Concentração máxima por ativo: {cap_sugerido:.0%}")
+
+            data_min, data_max = dados.index.min().date(), dados.index.max().date()
+            periodo = st.date_input(
+                "Período de teste (fora da amostra)",
+                value=(pd.Timestamp("2024-11-01").date(), data_max),
+                min_value=data_min, max_value=data_max, key="sim_periodo",
+                help="Intervalo em que a carteira é avaliada fora da amostra. O "
+                     "treino usa sempre dados anteriores a esta data inicial — "
+                     "nunca há vazamento de informação do futuro.",
+            )
+
+            with st.popover("Configurações avançadas", use_container_width=True):
+                janela_anos = st.selectbox(
+                    "Janela de treino (anos)", [1, 3, 5, 7], index=2, key="sim_janela",
+                    help="Quantos anos de histórico, imediatamente antes do período "
+                         "de teste, são usados para treinar (otimizar) a carteira.",
+                )
+                freq_reb = st.segmented_control(
+                    "Frequência de rebalanceamento",
+                    ["Mensal", "Trimestral", "Guiado por ML"],
+                    default="Trimestral", key="sim_freq",
+                    help="\"Guiado por ML\" ativa o sinal de Random Forest, que decide "
+                         "dia a dia se vale a pena rebalancear a carteira.",
+                ) or "Trimestral"
+                st.caption(
+                    "Objetivo de otimização ativo: **Mínimo Tracking Error**. "
+                    "Demais objetivos (retorno ajustado, mínimo turnover) entram na próxima fase."
+                )
+
+            periodo_valido = isinstance(periodo, tuple) and len(periodo) == 2
+            universo_valido = len(universo_sel) >= 5
+
+        with resu:
+            if not universo_valido:
+                st.warning("Selecione ao menos 5 ações no universo para simular.")
+            elif not periodo_valido:
+                st.info("Selecione um período de teste completo (data inicial e final).")
+            else:
+                teste_ini, teste_fim = periodo
+                treino_fim = pd.Timestamp(teste_ini) - pd.Timedelta(days=1)
+                treino_ini = max(treino_fim - pd.DateOffset(years=int(janela_anos)), dados.index.min())
+
+                if treino_fim <= treino_ini:
+                    st.error("Não há dados suficientes antes do período escolhido para treinar.")
+                else:
+                    if sugerir:
+                        with st.spinner("Buscando K ideal..."):
+                            K_rec = recomendar_k(
+                                universo_sel, str(treino_ini.date()), str(treino_fim.date()), cap_sugerido,
+                            )
+                        st.session_state["sim_K_pendente"] = int(K_rec)
+                        st.rerun()
+
+                    with st.spinner("Otimizando carteira..."):
+                        resultado = rodar_simulacao(
+                            universo_sel, K_sel, cap_sugerido,
+                            str(treino_ini.date()), str(treino_fim.date()),
+                            str(teste_ini), str(teste_fim),
+                        )
+
+                    if resultado.get("teste_vazio"):
+                        st.error("O período de teste escolhido não contém dias de pregão. Ajuste as datas.")
+                    else:
+                        resultado = dict(resultado)
+                        resultado["K"] = K_sel
+                        resultado["params"] = {
+                            "universo_n": len(universo_sel), "cap": cap_sugerido,
+                            "janela_anos": janela_anos, "freq_reb": freq_reb,
+                            "treino": f"{treino_ini.date()} a {treino_fim.date()}",
+                            "teste": f"{teste_ini} a {teste_fim}",
+                        }
+
+                        if freq_reb == "Guiado por ML":
+                            with st.spinner("Treinando sinal de ML..."):
+                                resultado["ml_sinal"] = gerar_sinal_ml(
+                                    resultado["pesos"], str(teste_ini), str(teste_fim),
+                                )
+                        else:
+                            resultado["ml_sinal"] = None
+
+                        assinatura = (K_sel, len(universo_sel), round(cap_sugerido, 3),
+                                      str(treino_ini.date()), str(teste_ini), str(teste_fim), freq_reb)
+                        if st.session_state.get("sim_ultima_assinatura") != assinatura:
+                            st.session_state["sim_ultima_assinatura"] = assinatura
+                            hist = st.session_state.get("historico_simulacoes", [])
+                            hist.append(resultado)
+                            st.session_state["historico_simulacoes"] = hist[-10:]
+                            registrar_simulacao(resultado)
+                        st.session_state["ultima_simulacao"] = resultado
+
+                        c1, c2, c3, c4 = st.columns(4)
+                        c1.metric("Tracking Error", f"{resultado['tracking_error']*100:.4f}%",
+                                   help="Desvio padrão da diferença diária entre o retorno da "
+                                        "carteira e o retorno do IBOV no período de teste. "
+                                        "Quanto menor, mais fiel a réplica.")
+                        c2.metric("Correlação c/ IBOV", f"{resultado['correlacao']:.2%}",
+                                   help="Correlação entre os retornos diários da carteira e do "
+                                        "IBOV no período de teste.")
+                        c3.metric("Retorno da carteira", f"{resultado['retorno_carteira_acum']:.2%}",
+                                   help="Retorno acumulado da carteira simulada durante todo o "
+                                        "período de teste escolhido.")
+                        c4.metric("Retorno do IBOV", f"{resultado['retorno_ibov_acum']:.2%}",
+                                   help="Retorno acumulado do IBOV no mesmo período, para comparação.")
+
+                        pesos = resultado["pesos"]
+                        pk = pesos.copy()
+                        pk.index = pk.index.str.replace(".SA", "")
+
+                        cg1, cg2 = st.columns(2)
+                        with cg1:
+                            titulo_ajuda(
+                                "Composição da carteira",
+                                "Peso de cada ação na carteira otimizada para o K e o perfil "
+                                "de risco escolhidos ao lado.",
+                                nivel="",
+                            )
+                            fig = go.Figure(go.Bar(
+                                x=pk.index, y=pk.values * 100,
+                                marker_color=[OURO if v > pk.mean() else VERDE for v in pk.values],
+                                text=[f"{v:.1f}%" for v in pk.values * 100], textposition="outside",
+                            ))
+                            fig.update_layout(**PLOTLY_BASE, height=320, xaxis_title="", yaxis_title="Peso (%)",
+                                               title="Composição da carteira", showlegend=False)
+                            st.plotly_chart(fig, use_container_width=True, key="sim_fig_pesos")
+                        with cg2:
+                            titulo_ajuda(
+                                "Retorno acumulado",
+                                "Crescimento de R$1 investido na carteira simulada e no IBOV "
+                                "durante o período de teste. Triângulos marcam dias em que o "
+                                "sinal de ML indicou rebalanceamento.",
+                                nivel="",
+                            )
+                            fig2 = go.Figure()
+                            fig2.add_trace(go.Scatter(
+                                x=resultado["serie_carteira"].index, y=resultado["serie_carteira"].values,
+                                line=dict(color=VERDE, width=2.5), name="Carteira",
+                            ))
+                            fig2.add_trace(go.Scatter(
+                                x=resultado["serie_ibov"].index, y=resultado["serie_ibov"].values,
+                                line=dict(color=BRANCO, width=1.5, dash="dot"), name="IBOV",
+                            ))
+                            ml_sinal = resultado.get("ml_sinal")
+                            if ml_sinal:
+                                serie_c = resultado["serie_carteira"]
+                                datas_sinal = [s["data"] for s in ml_sinal["sinais"]
+                                               if s["sinal"] == 1 and s["data"] in serie_c.index]
+                                if datas_sinal:
+                                    fig2.add_trace(go.Scatter(
+                                        x=datas_sinal, y=[serie_c.loc[d] for d in datas_sinal],
+                                        mode="markers",
+                                        marker=dict(color=OURO, size=11, symbol="triangle-up"),
+                                        name="Sinal ML",
+                                    ))
+                            _base_sem_legend = {k: v for k, v in PLOTLY_BASE.items() if k != "legend"}
+                            fig2.update_layout(
+                                **_base_sem_legend, height=320, title="Retorno acumulado",
+                                yaxis_title="Base 1.0",
+                                legend=dict(orientation="h", yanchor="bottom", y=1.08, x=0.5, xanchor="center"),
+                            )
+                            st.plotly_chart(fig2, use_container_width=True, key="sim_fig_retorno")
+
+                        if resultado.get("ml_sinal") is not None:
+                            n_sinais = sum(1 for s in resultado["ml_sinal"]["sinais"] if s["sinal"] == 1)
+                            st.caption(
+                                f"{n_sinais} sinal(is) de rebalanceamento detectado(s) no período "
+                                f"(Random Forest treinado com {resultado['ml_sinal']['n_treino']} amostras)."
+                            )
+                        elif freq_reb == "Guiado por ML":
+                            st.caption("Histórico insuficiente antes do período de teste para treinar o sinal de ML.")
+
+                        with st.expander("Turnover, custo de transação e exportação"):
+                            hist = st.session_state.get("historico_simulacoes", [])
+                            turnover = None
+                            if len(hist) >= 2:
+                                pesos_ant = hist[-2]["pesos"]
+                                todos = set(pesos.index) | set(pesos_ant.index)
+                                turnover = 0.5 * sum(
+                                    abs(float(pesos.get(t, 0.0)) - float(pesos_ant.get(t, 0.0))) for t in todos
+                                )
+                            ce1, ce2, ce3 = st.columns(3)
+                            custo_bps = ce1.slider(
+                                "Custo assumido (bps)", 1, 50, 10, key="sim_custo_bps",
+                                help="Custo de transação assumido por ponto-base, aplicado ao "
+                                     "turnover para estimar o custo de ajustar a carteira.",
+                            )
+                            if turnover is not None:
+                                ce2.metric("Turnover vs. ajuste anterior", f"{turnover:.1%}",
+                                           help="Fração da carteira que mudou de composição em "
+                                                "relação ao ajuste de parâmetros anterior nesta sessão.")
+                                ce3.metric("Custo estimado", f"{turnover*custo_bps/100:.3f}%",
+                                           help="Turnover multiplicado pelo custo em bps assumido ao lado.")
+                            else:
+                                ce2.info("Disponível após o 2º ajuste de parâmetros nesta sessão.")
+
+                            buffer = io.BytesIO()
+                            with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+                                pesos.to_frame("peso").to_excel(writer, sheet_name="Carteira")
+                                pd.DataFrame([{
+                                    "K": resultado["K"], "Tracking Error": resultado["tracking_error"],
+                                    "Correlacao": resultado["correlacao"],
+                                    "Retorno_Carteira": resultado["retorno_carteira_acum"],
+                                    "Retorno_IBOV": resultado["retorno_ibov_acum"],
+                                    **resultado["params"],
+                                }]).to_excel(writer, sheet_name="Resumo", index=False)
+                            cdl1, cdl2 = st.columns(2)
+                            cdl1.download_button(
+                                "Exportar Excel", data=buffer.getvalue(),
+                                file_name="simulacao_index_tracking.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                use_container_width=True, key="sim_dl_xlsx",
+                            )
+                            cdl2.download_button(
+                                "Exportar PDF", data=gerar_pdf_relatorio(resultado),
+                                file_name="relatorio_index_tracking.pdf",
+                                mime="application/pdf",
+                                use_container_width=True, key="sim_dl_pdf",
+                            )
+
+                        top10_html = "".join(
+                            f"<div style='display:flex; justify-content:space-between; padding:5px 0;"
+                            f"border-bottom:1px solid {BORDA};'>"
+                            f"<span style='color:{BRANCO}'>{acao}</span>"
+                            f"<span style='color:{VERDE}; font-weight:700'>{peso*100:.1f}%</span></div>"
+                            for acao, peso in pk.head(10).items()
+                        )
+                        with st.expander("Top 10 posições da carteira"):
+                            st.markdown(top10_html, unsafe_allow_html=True)
+
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 2 — COMPARAR CENÁRIOS
+    # ══════════════════════════════════════════════════════════════════════
+    with tab_comp:
+        st.markdown("##### Rodar um novo lote de comparação")
+        st.caption("Usa o mesmo universo, perfil de risco e período configurados no Simulador.")
+
+        resultado_atual = st.session_state.get("ultima_simulacao")
+        if resultado_atual is None:
+            st.info("Ajuste parâmetros na aba **Simulador** primeiro — o lote reaproveita esse contexto.")
+        else:
+            p = resultado_atual["params"]
+            universo_lote = list(acoes) if p["universo_n"] == len(acoes) else None
+            candidatos_padrao = [k for k in [10, 15, 20, 25, 30, 40] if k <= len(acoes)]
+            Ks_comparar = st.multiselect(
+                "Valores de K para comparar simultaneamente:",
+                options=[5, 8, 10, 12, 15, 18, 20, 25, 30, 40, 54],
+                default=candidatos_padrao, key="comp_ks",
+                help="Cada valor de K selecionado roda uma simulação completa e "
+                     "independente, usando o mesmo universo, perfil e período do Simulador.",
+            )
+            if st.button("Rodar comparação", type="primary", disabled=not Ks_comparar):
+                treino_ini_str, treino_fim_str = p["treino"].split(" a ")
+                teste_ini_str, teste_fim_str = p["teste"].split(" a ")
+                universo_lote = universo_lote or list(acoes)
+                lote_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+                resultados_lote, barra = [], st.progress(0.0)
+                for i, K in enumerate(sorted(Ks_comparar)):
+                    r = rodar_simulacao(universo_lote, K, p["cap"], treino_ini_str, treino_fim_str,
+                                         teste_ini_str, teste_fim_str)
+                    if not r.get("teste_vazio"):
+                        r = dict(r)
+                        r["K"] = K
+                        r["params"] = {**p}
+                        registrar_simulacao(r, lote_id=lote_id)
+                        resultados_lote.append(r)
+                    barra.progress((i + 1) / len(Ks_comparar))
+                barra.empty()
+                if resultados_lote:
+                    st.success(f"{len(resultados_lote)} cenários rodados (lote {lote_id}) — veja a comparação abaixo.")
+                else:
+                    st.error("Nenhum cenário pôde ser avaliado no período escolhido.")
+
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown("##### Comparar simulações já registradas")
+
+        historico = carregar_historico_persistente()
+        if not historico:
+            st.info("Nenhuma simulação registrada ainda.")
+        else:
+            opcoes = {}
+            for h in reversed(historico):
+                rotulo = f"K={h['K']} · TE={h['tracking_error']*100:.4f}% · {h['timestamp'][:16].replace('T',' ')} · #{h['id'][-4:]}"
+                opcoes[rotulo] = h
+
+            selecionados = st.multiselect(
+                "Selecione de 2 a 6 simulações:",
+                options=list(opcoes.keys()), default=list(opcoes.keys())[:min(3, len(opcoes))],
+                max_selections=6, key="comp_selecionados",
+                help="Escolha simulações já registradas (desta sessão ou de sessões "
+                     "anteriores) para comparar lado a lado.",
+            )
+            if len(selecionados) < 2:
+                st.warning("Selecione ao menos 2 simulações para comparar.")
+            else:
+                entradas = [opcoes[s] for s in selecionados]
+                df_comp = pd.DataFrame([{
+                    "Cenário": f"K={e['K']} · #{e['id'][-4:]}", "K": e["K"],
+                    "Tracking Error (%)": e["tracking_error"] * 100,
+                    "Correlação (%)": e["correlacao"] * 100,
+                    "Retorno Carteira (%)": e["retorno_carteira_acum"] * 100,
+                    "Retorno IBOV (%)": e["retorno_ibov_acum"] * 100,
+                    "Treino": e["params"].get("treino", ""), "Teste": e["params"].get("teste", ""),
+                } for e in entradas])
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    titulo_ajuda("Tracking Error por cenário",
+                                  "Menor é melhor. A barra em destaque marca o cenário com "
+                                  "menor erro entre os selecionados.", nivel="")
+                    fig = go.Figure(go.Bar(
+                        x=df_comp["Cenário"], y=df_comp["Tracking Error (%)"],
+                        marker_color=[OURO if v == df_comp["Tracking Error (%)"].min() else VERDE
+                                      for v in df_comp["Tracking Error (%)"]],
+                        text=[f"{v:.4f}%" for v in df_comp["Tracking Error (%)"]], textposition="outside",
+                    ))
+                    fig.update_layout(**PLOTLY_BASE, height=340, title="Tracking Error por cenário",
+                                       showlegend=False, xaxis_title="", yaxis_title="Tracking Error (%)")
+                    st.plotly_chart(fig, use_container_width=True, key="comp_fig_te")
+                with col2:
+                    titulo_ajuda("Correlação com IBOV por cenário",
+                                  "Maior é melhor. A barra em destaque marca o cenário com "
+                                  "maior correlação entre os selecionados.", nivel="")
+                    fig2 = go.Figure(go.Bar(
+                        x=df_comp["Cenário"], y=df_comp["Correlação (%)"],
+                        marker_color=[OURO if v == df_comp["Correlação (%)"].max() else AZUL
+                                      for v in df_comp["Correlação (%)"]],
+                        text=[f"{v:.2f}%" for v in df_comp["Correlação (%)"]], textposition="outside",
+                    ))
+                    fig2.update_layout(**PLOTLY_BASE, height=340, title="Correlação com IBOV por cenário",
+                                        showlegend=False, xaxis_title="", yaxis_title="Correlação (%)")
+                    st.plotly_chart(fig2, use_container_width=True, key="comp_fig_corr")
+
+                df_show = df_comp.drop(columns=["K"]).copy()
+                for c in ["Tracking Error (%)", "Correlação (%)", "Retorno Carteira (%)", "Retorno IBOV (%)"]:
+                    df_show[c] = df_show[c].map("{:.4f}".format)
+                st.dataframe(df_show, use_container_width=True, hide_index=True)
+
+                melhor = df_comp.loc[df_comp["Tracking Error (%)"].idxmin()]
+                st.success(f"Menor Tracking Error: **{melhor['Cenário']}** ({melhor['Tracking Error (%)']:.4f}%)")
+
+                buffer_comp = io.BytesIO()
+                with pd.ExcelWriter(buffer_comp, engine="openpyxl") as writer:
+                    df_comp.to_excel(writer, sheet_name="Comparacao", index=False)
+                st.download_button(
+                    "Exportar comparação (Excel)", data=buffer_comp.getvalue(),
+                    file_name="comparacao_cenarios.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="comp_dl_xlsx",
+                )
+
+        with st.expander("Gerenciar histórico persistente"):
+            st.caption(f"Arquivo: `{HIST_FILE}` · {len(historico) if historico else 0} simulação(ões) no total.")
+            if st.button("Limpar todo o histórico persistente", key="comp_limpar"):
+                with open(HIST_FILE, "w", encoding="utf-8") as f:
+                    json.dump([], f)
+                st.success("Histórico limpo. Recarregue a página para ver o efeito.")
+
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 3 — PROJEÇÕES FUTURAS (MONTE CARLO)
+    # ══════════════════════════════════════════════════════════════════════
+    with tab_proj:
+        st.caption(
+            "Reamostra blocos contíguos do histórico real (block bootstrap) para projetar "
+            "cenários futuros plausíveis da carteira ativa no Simulador."
+        )
+        resultado = st.session_state.get("ultima_simulacao")
+        if resultado is None:
+            st.info("Ajuste parâmetros na aba **Simulador** primeiro — a projeção parte da carteira ativa.")
+        else:
+            pesos = resultado["pesos"]
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                horizonte = st.select_slider(
+                    "Horizonte (dias úteis)", [20, 40, 60, 90, 120], value=60, key="proj_horizonte",
+                    help="Quantos dias úteis no futuro a projeção cobre.",
+                )
+            with c2:
+                n_sim = st.slider(
+                    "Nº de simulações", 200, 2000, 500, step=100, key="proj_nsim",
+                    help="Quantos futuros hipotéticos são gerados. Mais simulações = "
+                         "estimativa mais estável, porém mais lenta.",
+                )
+            with c3:
+                bloco = st.slider(
+                    "Tamanho do bloco (dias)", 5, 40, 20, key="proj_bloco",
+                    help="Tamanho dos blocos de dias reais colados para formar cada "
+                         "cenário simulado. Blocos maiores preservam mais autocorrelação.",
+                )
+
+            st.caption(f"Carteira ativa: K={resultado['K']} · TE histórico = {resultado['tracking_error']*100:.4f}%")
+
+            if st.button("Rodar Projeção de Monte Carlo", type="primary", use_container_width=True, key="proj_rodar"):
+                with st.spinner(f"Simulando {n_sim} cenários futuros de {horizonte} dias..."):
+                    st.session_state["ultima_projecao"] = montecarlo_projecao(pesos, horizonte, n_sim, bloco)
+
+            proj = st.session_state.get("ultima_projecao")
+            if proj:
+                titulo_ajuda(
+                    "Divergência projetada (carteira - IBOV)",
+                    "Faixas de possíveis divergências futuras entre a carteira e o IBOV, "
+                    "construídas a partir de blocos reais do histórico. Não é uma previsão "
+                    "pontual — é a faixa de cenários plausíveis.",
+                    nivel="",
+                )
+                dias_x = list(range(1, proj["horizonte"] + 1))
+                pdiff = proj["percentis_diff"]
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=dias_x + dias_x[::-1], y=list(pdiff[95]) + list(pdiff[5])[::-1],
+                                          fill="toself", fillcolor=VERDE_A10, line=dict(width=0),
+                                          name="Faixa 5%–95%"))
+                fig.add_trace(go.Scatter(x=dias_x + dias_x[::-1], y=list(pdiff[75]) + list(pdiff[25])[::-1],
+                                          fill="toself", fillcolor=VERDE_A20, line=dict(width=0),
+                                          name="Faixa 25%–75%"))
+                fig.add_trace(go.Scatter(x=dias_x, y=pdiff[50], line=dict(color=VERDE, width=2.5),
+                                          name="Mediana projetada"))
+                fig.add_hline(y=0, line_dash="dot", line_color=BRANCO, opacity=0.4)
+                fig.update_layout(
+                    **PLOTLY_BASE, height=420,
+                    title=f"Divergência projetada (carteira - IBOV) — {proj['n_sim']} simulações, blocos de {proj['bloco']}d",
+                    xaxis_title="Dias úteis à frente", yaxis_title="Divergência acumulada",
+                    yaxis_tickformat=".1%",
+                )
+                st.plotly_chart(fig, use_container_width=True, key="proj_fig")
+
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Mediana ao final do horizonte", f"{pdiff[50][-1]:+.2%}")
+                c2.metric("Faixa 90% de confiança (final)", f"[{pdiff[5][-1]:+.2%} ; {pdiff[95][-1]:+.2%}]")
+                c3.metric("Prob. divergência > 2× TE histórico", f"{proj['prob_divergencia']:.1%}")
+
+                if proj["prob_divergencia"] > 0.25:
+                    st.warning("Probabilidade não-trivial de divergência relevante — considere revisar K ou a frequência de rebalanceamento.")
+                else:
+                    st.success("Baixa probabilidade de divergência relevante neste horizonte, dado o histórico.")
+
+                with st.expander("Como interpretar esta projeção"):
+                    st.markdown(
+                        "- Cada simulação reconstrói um futuro hipotético colando blocos de dias "
+                        "**realmente observados** no histórico.\n"
+                        "- Preserva parte da autocorrelação e volatilidade real do mercado.\n"
+                        "- Faixas mais largas em horizontes longos refletem incerteza genuína, não defeito do modelo.\n"
+                        "- Esta projeção **não prevê o futuro** — quantifica a faixa de resultados plausíveis."
+                    )
+
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 4 — MONITORAMENTO E REOTIMIZAÇÃO
+    # ══════════════════════════════════════════════════════════════════════
+    with tab_monit:
+        st.caption("Regime de mercado, anomalias de tracking error, e verificação de drift da carteira ativa.")
+        resultado = st.session_state.get("ultima_simulacao")
+        if resultado is None:
+            st.info("Ajuste parâmetros na aba **Simulador** primeiro.")
+        else:
+            pesos = resultado["pesos"]
+            with st.spinner("Analisando regime e anomalias..."):
+                diag = detectar_regime_anomalias(pesos)
+
+            cor_regime = {"Calmo": VERDE, "Normal": AZUL, "Volátil": "#ff4b4b", "Indefinido": CINZA}
+            c1, c2, c3 = st.columns(3)
+            c1.markdown(
+                f"<div class='card' style='text-align:center'>"
+                f"<div style='font-size:1.6rem; font-weight:800; color:{cor_regime.get(diag['regime_atual'], CINZA)}'>"
+                f"{diag['regime_atual']}</div>"
+                f"<div style='font-size:0.75rem; color:{CINZA}; margin-top:4px'>Regime atual do IBOV</div></div>",
+                unsafe_allow_html=True,
+            )
+            c2.metric("Vol. anualizada atual (20d)", f"{diag['vol_atual']:.1f}%" if diag['vol_atual'] is not None else "N/D",
+                       help="Volatilidade anualizada do IBOV nos últimos 20 dias de pregão.")
+            c3.metric("Anomalias de TE no histórico", len(diag["anomalias"]),
+                       help="Dias em que o erro de tracking ficou estatisticamente fora do "
+                            "padrão (|z-score| > 3) em relação à média móvel recente.")
+
+            titulo_ajuda("Volatilidade do IBOV ao longo do tempo",
+                          "Volatilidade anualizada móvel de 20 dias. A linha pontilhada marca "
+                          "a mediana histórica, usada como referência de regime.", nivel="")
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=diag["vol_ibov_20d"].index, y=diag["vol_ibov_20d"].values,
+                                      line=dict(color=AZUL, width=1.3), name="Vol. IBOV (20d)"))
+            fig.add_hline(y=diag["vol_mediana"], line_dash="dot", line_color=BRANCO, opacity=0.5,
+                          annotation_text="mediana histórica")
+            fig.update_layout(**PLOTLY_BASE, height=300, title="Volatilidade do IBOV ao longo do tempo",
+                               yaxis_title="Vol. anualizada (%)", showlegend=False)
+            st.plotly_chart(fig, use_container_width=True, key="monit_fig_vol")
+
+            titulo_ajuda("Tracking error diário e anomalias",
+                          "Erro absoluto diário entre carteira e IBOV. Marcadores em X indicam "
+                          "dias estatisticamente anômalos (|z-score| > 3).", nivel="")
+            fig2 = go.Figure()
+            fig2.add_trace(go.Scatter(x=diag["te_abs"].index, y=diag["te_abs"].values * 100,
+                                       line=dict(color=VERDE, width=1.1), name="TE diário absoluto"))
+            if len(diag["anomalias"]) > 0:
+                fig2.add_trace(go.Scatter(
+                    x=diag["anomalias"].index, y=diag["te_abs"].loc[diag["anomalias"].index].values * 100,
+                    mode="markers", marker=dict(color="#ff4b4b", size=9, symbol="x"), name="Anomalia",
+                ))
+            _base_sem_legend = {k: v for k, v in PLOTLY_BASE.items() if k != "legend"}
+            fig2.update_layout(**_base_sem_legend, height=300, title="Tracking error diário e anomalias (|z| > 3)",
+                                yaxis_title="TE absoluto (%)",
+                                legend=dict(orientation="h", yanchor="bottom", y=1.05, x=0.5, xanchor="center"))
+            st.plotly_chart(fig2, use_container_width=True, key="monit_fig_te")
+
+            st.markdown("<hr>", unsafe_allow_html=True)
+            st.markdown("##### Verificação de drift e reotimização")
+
+            teste_fim_str = resultado["params"]["teste"].split(" a ")[-1]
+            try:
+                teste_fim_ts = pd.Timestamp(teste_fim_str)
+                pos_data = dados.loc[dados.index > teste_fim_ts]
+            except Exception:
+                pos_data = pd.DataFrame()
+
+            if len(pos_data) < 10:
+                st.info(
+                    "Não há dados suficientes após o período de teste desta simulação para medir "
+                    "o drift real (este protótipo usa uma base histórica fixa, até 2025-04-30). "
+                    "Em produção, esta seção compararia o desempenho real dos dias mais recentes "
+                    "contra o Tracking Error esperado, dia após dia."
+                )
+            else:
+                try:
+                    ret_c = pos_data[pesos.index].values @ pesos.values
+                    ret_i = pos_data["IBOV"].values
+                    te_atual = float(np.std(ret_c - ret_i))
+                    drift_pct = (te_atual - resultado["tracking_error"]) / resultado["tracking_error"] * 100
+
+                    cd1, cd2, cd3 = st.columns(3)
+                    cd1.metric("TE no período de teste original", f"{resultado['tracking_error']*100:.4f}%")
+                    cd2.metric("TE observado desde então", f"{te_atual*100:.4f}%")
+                    cd3.metric("Drift", f"{drift_pct:+.1f}%",
+                               help="Variação percentual do TE observado recentemente em relação "
+                                    "ao TE medido no backtest original.")
+
+                    if drift_pct > 25:
+                        st.warning(
+                            "O tracking error real degradou mais de 25% em relação ao esperado — "
+                            "recomenda-se reotimizar a carteira com dados mais recentes."
+                        )
+                        if st.button("Reotimizar agora com dados mais recentes", type="primary", key="monit_reotim"):
+                            with st.spinner("Reotimizando..."):
+                                novo_treino_fim = dados.index.max()
+                                novo_treino_ini = max(
+                                    novo_treino_fim - pd.DateOffset(years=int(resultado["params"]["janela_anos"])),
+                                    dados.index.min(),
+                                )
+                                pos_corte = max(0, len(dados.loc[:novo_treino_fim]) - 20)
+                                checagem_ini = dados.loc[:novo_treino_fim].index[pos_corte]
+                                K_novo = recomendar_k(
+                                    pesos.index.tolist(), str(novo_treino_ini.date()), str(novo_treino_fim.date()),
+                                    resultado["params"]["cap"],
+                                )
+                                resultado_novo = rodar_simulacao(
+                                    pesos.index.tolist(), K_novo, resultado["params"]["cap"],
+                                    str(novo_treino_ini.date()), str(novo_treino_fim.date()),
+                                    str(checagem_ini.date()), str(novo_treino_fim.date()),
+                                )
+                                resultado_novo = dict(resultado_novo)
+                                resultado_novo["K"] = K_novo
+                                resultado_novo["params"] = {
+                                    **resultado["params"],
+                                    "treino": f"{novo_treino_ini.date()} a {novo_treino_fim.date()}",
+                                    "teste": f"snapshot in-sample {checagem_ini.date()} a {novo_treino_fim.date()} (nao e backtest OOS)",
+                                }
+                                resultado_novo["ml_sinal"] = None
+                                registrar_simulacao(resultado_novo)
+                                st.session_state["ultima_simulacao"] = resultado_novo
+                                st.success(
+                                    f"Carteira reotimizada com dados até {novo_treino_fim.date()} — "
+                                    f"novo K={K_novo}. As métricas refletem um snapshot in-sample, não "
+                                    f"um novo backtest fora da amostra. Veja na aba **Simulador**."
+                                )
+                    else:
+                        st.success("Tracking error dentro do esperado — sem necessidade de reotimização.")
+                except KeyError:
+                    st.info("Algumas ações da carteira não têm dados no período mais recente para medir o drift.")
+
+            st.markdown("<hr>", unsafe_allow_html=True)
+            st.markdown(
+                "**Sobre automação em produção:** esta página demonstra a lógica de monitoramento e "
+                "reotimização — em produção real, essa verificação seria executada automaticamente "
+                "todos os dias por um job agendado (cron, Airflow, ou equivalente), com alertas via "
+                "e-mail/Slack quando o drift superasse o limite. Nesta versão local, o botão acima "
+                "reproduz manualmente o mesmo efeito."
+            )
