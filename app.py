@@ -1417,23 +1417,14 @@ if area == "Plataforma":
             st.caption(f"{len(universo_sel)} ações no universo.")
 
             n_max_k = max(5, len(universo_sel))
-            if "sim_K_pendente" in st.session_state:
-                st.session_state["sim_K"] = int(np.clip(st.session_state.pop("sim_K_pendente"), 5, n_max_k))
-            colk1, colk2 = st.columns([3, 1])
-            with colk1:
-                K_sel = st.slider(
-                    "Número de ações (K)", 5, n_max_k,
-                    value=min(int(st.session_state.get("sim_K", 30)), n_max_k),
-                    key="sim_K",
-                    help="Quantas ações a carteira final terá. Menos ações = mais "
-                         "simples e barato de operar; mais ações = tende a reduzir "
-                         "o Tracking Error.",
-                )
-            with colk2:
-                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-                sugerir = st.button("Sugerir K", use_container_width=True,
-                                     help="Busca o menor K com erro próximo do melhor possível, "
-                                          "validado dentro do próprio período de treino.")
+            K_sel = st.slider(
+                "Número de ações (K)", 5, n_max_k,
+                value=min(int(st.session_state.get("sim_K", 30)), n_max_k),
+                key="sim_K",
+                help="Quantas ações a carteira final terá. Menos ações = mais "
+                     "simples e barato de operar; mais ações = tende a reduzir "
+                     "o Tracking Error.",
+            )
 
             perfil_risco = st.segmented_control(
                 "Perfil de risco", ["Conservador", "Moderado", "Agressivo"],
@@ -1488,14 +1479,6 @@ if area == "Plataforma":
                 if treino_fim <= treino_ini:
                     st.error("Não há dados suficientes antes do período escolhido para treinar.")
                 else:
-                    if sugerir:
-                        with st.spinner("Buscando K ideal..."):
-                            K_rec = recomendar_k(
-                                universo_sel, str(treino_ini.date()), str(treino_fim.date()), cap_sugerido,
-                            )
-                        st.session_state["sim_K_pendente"] = int(K_rec)
-                        st.rerun()
-
                     with st.spinner("Otimizando carteira..."):
                         resultado = rodar_simulacao(
                             universo_sel, K_sel, cap_sugerido,
@@ -1613,7 +1596,13 @@ if area == "Plataforma":
                         elif freq_reb == "Guiado por ML":
                             st.caption("Histórico insuficiente antes do período de teste para treinar o sinal de ML.")
 
-                        with st.expander("Turnover, custo de transação e exportação"):
+                        with st.expander("Custo de ajustar a carteira e exportar resultados"):
+                            st.markdown(
+                                "Toda vez que você muda os parâmetros e a carteira é reotimizada, "
+                                "algumas ações entram e outras saem — essa movimentação gera custos de "
+                                "corretagem. Esta seção estima quanto custaria executar esse ajuste e "
+                                "permite exportar os resultados da simulação."
+                            )
                             hist = st.session_state.get("historico_simulacoes", [])
                             turnover = None
                             if len(hist) >= 2:
@@ -1624,19 +1613,28 @@ if area == "Plataforma":
                                 )
                             ce1, ce2, ce3 = st.columns(3)
                             custo_bps = ce1.slider(
-                                "Custo assumido (bps)", 1, 50, 10, key="sim_custo_bps",
-                                help="Custo de transação assumido por ponto-base, aplicado ao "
-                                     "turnover para estimar o custo de ajustar a carteira.",
+                                "Custo por operação (bps)", 1, 50, 10, key="sim_custo_bps",
+                                help="Um bps (ponto-base) equivale a 0,01% do valor operado. "
+                                     "Corretoras cobram tipicamente entre 5 e 30 bps. "
+                                     "Arraste para simular diferentes patamares de custo.",
                             )
                             if turnover is not None:
-                                ce2.metric("Turnover vs. ajuste anterior", f"{turnover:.1%}",
-                                           help="Fração da carteira que mudou de composição em "
-                                                "relação ao ajuste de parâmetros anterior nesta sessão.")
-                                ce3.metric("Custo estimado", f"{turnover*custo_bps/100:.3f}%",
-                                           help="Turnover multiplicado pelo custo em bps assumido ao lado.")
+                                ce2.metric(
+                                    "Troca de composição",
+                                    f"{turnover:.1%}",
+                                    help="Percentual da carteira que mudou entre a configuração anterior e a atual. "
+                                         "100% = trocou tudo; 10% = ajuste pequeno.",
+                                )
+                                ce3.metric(
+                                    "Custo total estimado",
+                                    f"{turnover*custo_bps/100:.3f}%",
+                                    help="Troca de composição multiplicada pelo custo por operação. "
+                                         "Representa o impacto da corretagem ao ajustar a carteira.",
+                                )
                             else:
-                                ce2.info("Disponível após o 2º ajuste de parâmetros nesta sessão.")
+                                ce2.info("Disponível a partir do segundo ajuste de parâmetros nesta sessão.")
 
+                            st.markdown("---")
                             buffer = io.BytesIO()
                             with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
                                 pesos.to_frame("peso").to_excel(writer, sheet_name="Carteira")
@@ -1661,16 +1659,6 @@ if area == "Plataforma":
                                 use_container_width=True, key="sim_dl_pdf",
                             )
 
-                        top10_html = "".join(
-                            f"<div style='display:flex; justify-content:space-between; padding:5px 0;"
-                            f"border-bottom:1px solid {BORDA};'>"
-                            f"<span style='color:{BRANCO}'>{acao}</span>"
-                            f"<span style='color:{VERDE}; font-weight:700'>{peso*100:.1f}%</span></div>"
-                            for acao, peso in pk.head(10).items()
-                        )
-                        with st.expander("Top 10 posições da carteira"):
-                            st.markdown(top10_html, unsafe_allow_html=True)
-
     # ══════════════════════════════════════════════════════════════════════
     # TAB 2 — COMPARAR CENÁRIOS
     # ══════════════════════════════════════════════════════════════════════
@@ -1684,14 +1672,23 @@ if area == "Plataforma":
         else:
             p = resultado_atual["params"]
             universo_lote = list(acoes) if p["universo_n"] == len(acoes) else None
-            candidatos_padrao = [k for k in [10, 15, 20, 25, 30, 40] if k <= len(acoes)]
-            Ks_comparar = st.multiselect(
-                "Valores de K para comparar simultaneamente:",
-                options=[5, 8, 10, 12, 15, 18, 20, 25, 30, 40, 54],
-                default=candidatos_padrao, key="comp_ks",
-                help="Cada valor de K selecionado roda uma simulação completa e "
-                     "independente, usando o mesmo universo, perfil e período do Simulador.",
+            k_max_disp = min(54, len(acoes))
+            k_range = st.slider(
+                "Intervalo de K a testar",
+                min_value=5, max_value=k_max_disp,
+                value=(10, min(30, k_max_disp)),
+                step=5, key="comp_k_range",
+                help="Arraste as duas extremidades para definir o menor e o maior número "
+                     "de ações que você quer comparar. A comparação roda um cenário para "
+                     "cada múltiplo de 5 dentro do intervalo escolhido.",
             )
+            Ks_comparar = sorted(set(
+                [k_range[0], k_range[1]]
+                + [k for k in range(10, k_range[1] + 1, 5) if k_range[0] <= k <= k_range[1]]
+            ))
+            Ks_comparar = [k for k in Ks_comparar if k <= len(acoes)]
+            if Ks_comparar:
+                st.caption(f"Valores de K que serao testados: {', '.join(str(k) for k in Ks_comparar)}")
             if st.button("Rodar comparação", type="primary", disabled=not Ks_comparar):
                 treino_ini_str, treino_fim_str = p["treino"].split(" a ")
                 teste_ini_str, teste_fim_str = p["teste"].split(" a ")
@@ -1715,23 +1712,33 @@ if area == "Plataforma":
                     st.error("Nenhum cenário pôde ser avaliado no período escolhido.")
 
         st.markdown("<hr>", unsafe_allow_html=True)
-        st.markdown("##### Comparar simulações já registradas")
+        st.markdown("##### Comparar simulações salvas")
+        st.markdown(
+            "Cada vez que você roda uma simulação no **Simulador**, ela fica salva automaticamente. "
+            "Aqui você pode colocar duas ou mais simulações lado a lado para ver qual configuração "
+            "entregou o melhor resultado — qual K rastreou o IBOV com mais precisão, qual teve "
+            "menor erro, qual gerou mais retorno."
+        )
 
         historico = carregar_historico_persistente()
         if not historico:
-            st.info("Nenhuma simulação registrada ainda.")
+            st.info("Nenhuma simulacao registrada ainda. Rode ao menos duas simulacoes no Simulador para comparar.")
         else:
             opcoes = {}
             for h in reversed(historico):
-                rotulo = f"K={h['K']} · TE={h['tracking_error']*100:.4f}% · {h['timestamp'][:16].replace('T',' ')} · #{h['id'][-4:]}"
+                rotulo = (
+                    f"K={h['K']} · Erro={h['tracking_error']*100:.4f}% · "
+                    f"Retorno={h['retorno_carteira_acum']*100:.1f}% · "
+                    f"{h['timestamp'][:16].replace('T',' ')}"
+                )
                 opcoes[rotulo] = h
 
             selecionados = st.multiselect(
-                "Selecione de 2 a 6 simulações:",
+                "Escolha as simulacoes que quer comparar (minimo 2):",
                 options=list(opcoes.keys()), default=list(opcoes.keys())[:min(3, len(opcoes))],
                 max_selections=6, key="comp_selecionados",
-                help="Escolha simulações já registradas (desta sessão ou de sessões "
-                     "anteriores) para comparar lado a lado.",
+                help="Cada linha representa uma simulacao ja realizada. O 'Erro' e o Tracking Error — "
+                     "quanto menor, melhor a replica do IBOV. 'Retorno' e o resultado acumulado da carteira.",
             )
             if len(selecionados) < 2:
                 st.warning("Selecione ao menos 2 simulações para comparar.")
@@ -1747,31 +1754,43 @@ if area == "Plataforma":
                 } for e in entradas])
 
                 col1, col2 = st.columns(2)
+                _base_comp = {k: v for k, v in PLOTLY_BASE.items() if k != "yaxis"}
                 with col1:
                     titulo_ajuda("Tracking Error por cenário",
-                                  "Menor é melhor. A barra em destaque marca o cenário com "
-                                  "menor erro entre os selecionados.", nivel="")
+                                  "Quanto menor a barra, melhor: significa que a carteira seguiu "
+                                  "o IBOV com mais precisao. A barra destacada tem o menor erro.", nivel="")
                     fig = go.Figure(go.Bar(
                         x=df_comp["Cenário"], y=df_comp["Tracking Error (%)"],
                         marker_color=[OURO if v == df_comp["Tracking Error (%)"].min() else VERDE
                                       for v in df_comp["Tracking Error (%)"]],
                         text=[f"{v:.4f}%" for v in df_comp["Tracking Error (%)"]], textposition="outside",
                     ))
-                    fig.update_layout(**PLOTLY_BASE, height=340, title="Tracking Error por cenário",
-                                       showlegend=False, xaxis_title="", yaxis_title="Tracking Error (%)")
+                    _te_max = df_comp["Tracking Error (%)"].max()
+                    fig.update_layout(
+                        **_base_comp, height=360, title="Tracking Error por cenario",
+                        showlegend=False, xaxis_title="", yaxis_title="Tracking Error (%)",
+                        yaxis=dict(**PLOTLY_BASE["yaxis"], range=[0, _te_max * 1.30]),
+                    )
                     st.plotly_chart(fig, use_container_width=True, key="comp_fig_te")
                 with col2:
-                    titulo_ajuda("Correlação com IBOV por cenário",
-                                  "Maior é melhor. A barra em destaque marca o cenário com "
-                                  "maior correlação entre os selecionados.", nivel="")
+                    titulo_ajuda("Correlacao com IBOV por cenario",
+                                  "Quanto maior a barra, melhor: significa que a carteira andou "
+                                  "junto com o IBOV. A barra destacada tem a maior correlacao.", nivel="")
                     fig2 = go.Figure(go.Bar(
                         x=df_comp["Cenário"], y=df_comp["Correlação (%)"],
                         marker_color=[OURO if v == df_comp["Correlação (%)"].max() else AZUL
                                       for v in df_comp["Correlação (%)"]],
                         text=[f"{v:.2f}%" for v in df_comp["Correlação (%)"]], textposition="outside",
                     ))
-                    fig2.update_layout(**PLOTLY_BASE, height=340, title="Correlação com IBOV por cenário",
-                                        showlegend=False, xaxis_title="", yaxis_title="Correlação (%)")
+                    _corr_max = df_comp["Correlação (%)"].max()
+                    _corr_min = df_comp["Correlação (%)"].min()
+                    fig2.update_layout(
+                        **_base_comp, height=360, title="Correlacao com IBOV por cenario",
+                        showlegend=False, xaxis_title="", yaxis_title="Correlacao (%)",
+                        yaxis=dict(**PLOTLY_BASE["yaxis"],
+                                   range=[max(0, _corr_min - (_corr_max - _corr_min) * 0.5),
+                                          min(105, _corr_max * 1.05)]),
+                    )
                     st.plotly_chart(fig2, use_container_width=True, key="comp_fig_corr")
 
                 df_show = df_comp.drop(columns=["K"]).copy()
@@ -1780,70 +1799,74 @@ if area == "Plataforma":
                 st.dataframe(df_show, use_container_width=True, hide_index=True)
 
                 melhor = df_comp.loc[df_comp["Tracking Error (%)"].idxmin()]
-                st.success(f"Menor Tracking Error: **{melhor['Cenário']}** ({melhor['Tracking Error (%)']:.4f}%)")
-
-                buffer_comp = io.BytesIO()
-                with pd.ExcelWriter(buffer_comp, engine="openpyxl") as writer:
-                    df_comp.to_excel(writer, sheet_name="Comparacao", index=False)
-                st.download_button(
-                    "Exportar comparação (Excel)", data=buffer_comp.getvalue(),
-                    file_name="comparacao_cenarios.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="comp_dl_xlsx",
+                st.info(
+                    f"Melhor resultado: **{melhor['Cenário']}** — Tracking Error de {melhor['Tracking Error (%)']:.4f}%, "
+                    f"correlacao de {melhor['Correlação (%)']:.2f}% com o IBOV."
                 )
-
-        with st.expander("Gerenciar histórico persistente"):
-            st.caption(f"Arquivo: `{HIST_FILE}` · {len(historico) if historico else 0} simulação(ões) no total.")
-            if st.button("Limpar todo o histórico persistente", key="comp_limpar"):
-                with open(HIST_FILE, "w", encoding="utf-8") as f:
-                    json.dump([], f)
-                st.success("Histórico limpo. Recarregue a página para ver o efeito.")
 
     # ══════════════════════════════════════════════════════════════════════
     # TAB 3 — PROJEÇÕES FUTURAS (MONTE CARLO)
     # ══════════════════════════════════════════════════════════════════════
     with tab_proj:
-        st.caption(
-            "Reamostra blocos contíguos do histórico real (block bootstrap) para projetar "
-            "cenários futuros plausíveis da carteira ativa no Simulador."
+        st.markdown(
+            "Aqui você visualiza como a sua carteira **pode se comportar nos próximos meses**, "
+            "com base no que o mercado já fez no passado. Nao é uma previsao do futuro — "
+            "é uma análise de 'e se o futuro se parecer com o passado?', mostrando o cenário "
+            "mais provável e os extremos possíveis."
         )
         resultado = st.session_state.get("ultima_simulacao")
         if resultado is None:
-            st.info("Ajuste parâmetros na aba **Simulador** primeiro — a projeção parte da carteira ativa.")
+            st.info("Configure e rode uma simulacao na aba **Simulador** primeiro — a projecao parte da carteira otimizada.")
         else:
             pesos = resultado["pesos"]
             c1, c2, c3 = st.columns(3)
             with c1:
                 horizonte = st.select_slider(
-                    "Horizonte (dias úteis)", [20, 40, 60, 90, 120], value=60, key="proj_horizonte",
-                    help="Quantos dias úteis no futuro a projeção cobre.",
+                    "Por quanto tempo projetar?",
+                    options=[20, 40, 60, 90, 120],
+                    value=60, key="proj_horizonte",
+                    help="Quantos dias de mercado (dias uteis) voce quer projetar. "
+                         "1 mes = ~20 dias · 3 meses = ~60 dias · 6 meses = ~120 dias. "
+                         "Horizontes mais longos trazem mais incerteza — as faixas ficam mais largas.",
+                    format_func=lambda x: {20: "1 mes (~20d)", 40: "2 meses (~40d)",
+                                           60: "3 meses (~60d)", 90: "4,5 meses (~90d)",
+                                           120: "6 meses (~120d)"}[x],
                 )
             with c2:
                 n_sim = st.slider(
-                    "Nº de simulações", 200, 2000, 500, step=100, key="proj_nsim",
-                    help="Quantos futuros hipotéticos são gerados. Mais simulações = "
-                         "estimativa mais estável, porém mais lenta.",
+                    "Quantos cenarios gerar?", 200, 2000, 500, step=100, key="proj_nsim",
+                    help="Cada cenario e um 'futuro alternativo' construido com fragmentos do historico real. "
+                         "Mais cenarios = resultado mais preciso e confiavel, mas demora um pouco mais para calcular. "
+                         "500 ja e suficiente para a maioria dos casos.",
                 )
             with c3:
                 bloco = st.slider(
-                    "Tamanho do bloco (dias)", 5, 40, 20, key="proj_bloco",
-                    help="Tamanho dos blocos de dias reais colados para formar cada "
-                         "cenário simulado. Blocos maiores preservam mais autocorrelação.",
+                    "Tamanho dos blocos de historico (dias)", 5, 40, 20, key="proj_bloco",
+                    help="O modelo monta cada cenario futuro colando pedacos do historico real. "
+                         "Este valor define o tamanho desses pedacos. "
+                         "Valor menor = mais variacao entre cenarios; "
+                         "valor maior = preserva melhor o ritmo e a volatilidade do mercado. "
+                         "Recomendado: entre 15 e 25 dias.",
                 )
 
-            st.caption(f"Carteira ativa: K={resultado['K']} · TE histórico = {resultado['tracking_error']*100:.4f}%")
+            st.caption(
+                f"Carteira ativa: {resultado['K']} acoes · "
+                f"Precisao historica (Tracking Error) = {resultado['tracking_error']*100:.4f}%"
+            )
 
-            if st.button("Rodar Projeção de Monte Carlo", type="primary", use_container_width=True, key="proj_rodar"):
-                with st.spinner(f"Simulando {n_sim} cenários futuros de {horizonte} dias..."):
+            if st.button("Gerar projecao", type="primary", use_container_width=True, key="proj_rodar"):
+                with st.spinner(f"Gerando {n_sim} cenarios para os proximos {horizonte} dias uteis..."):
                     st.session_state["ultima_projecao"] = montecarlo_projecao(pesos, horizonte, n_sim, bloco)
 
             proj = st.session_state.get("ultima_projecao")
             if proj:
                 titulo_ajuda(
-                    "Divergência projetada (carteira - IBOV)",
-                    "Faixas de possíveis divergências futuras entre a carteira e o IBOV, "
-                    "construídas a partir de blocos reais do histórico. Não é uma previsão "
-                    "pontual — é a faixa de cenários plausíveis.",
+                    "Diferenca projetada entre a carteira e o IBOV",
+                    "Mostra o quanto a carteira pode se afastar do IBOV ao longo do tempo. "
+                    "Linha central = cenario mais provavel. "
+                    "Faixa interna (mais escura) = onde ficam 50% dos cenarios. "
+                    "Faixa externa = onde ficam 90% dos cenarios. "
+                    "Acima de zero = carteira superou o IBOV; abaixo = IBOV foi melhor.",
                     nivel="",
                 )
                 dias_x = list(range(1, proj["horizonte"] + 1))
@@ -1851,48 +1874,88 @@ if area == "Plataforma":
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(x=dias_x + dias_x[::-1], y=list(pdiff[95]) + list(pdiff[5])[::-1],
                                           fill="toself", fillcolor=VERDE_A10, line=dict(width=0),
-                                          name="Faixa 5%–95%"))
+                                          name="Faixa 90% dos cenarios"))
                 fig.add_trace(go.Scatter(x=dias_x + dias_x[::-1], y=list(pdiff[75]) + list(pdiff[25])[::-1],
                                           fill="toself", fillcolor=VERDE_A20, line=dict(width=0),
-                                          name="Faixa 25%–75%"))
+                                          name="Faixa 50% dos cenarios"))
                 fig.add_trace(go.Scatter(x=dias_x, y=pdiff[50], line=dict(color=VERDE, width=2.5),
-                                          name="Mediana projetada"))
+                                          name="Cenario mais provavel"))
                 fig.add_hline(y=0, line_dash="dot", line_color=BRANCO, opacity=0.4)
+                _meses = horizonte // 20
                 fig.update_layout(
                     **PLOTLY_BASE, height=420,
-                    title=f"Divergência projetada (carteira - IBOV) — {proj['n_sim']} simulações, blocos de {proj['bloco']}d",
-                    xaxis_title="Dias úteis à frente", yaxis_title="Divergência acumulada",
+                    title=f"Diferenca projetada (carteira vs IBOV) — {proj['n_sim']} cenarios, {_meses} mes(es)",
+                    xaxis_title="Dias uteis a frente", yaxis_title="Diferenca acumulada",
                     yaxis_tickformat=".1%",
                 )
                 st.plotly_chart(fig, use_container_width=True, key="proj_fig")
 
                 c1, c2, c3 = st.columns(3)
-                c1.metric("Mediana ao final do horizonte", f"{pdiff[50][-1]:+.2%}")
-                c2.metric("Faixa 90% de confiança (final)", f"[{pdiff[5][-1]:+.2%} ; {pdiff[95][-1]:+.2%}]")
-                c3.metric("Prob. divergência > 2× TE histórico", f"{proj['prob_divergencia']:.1%}")
+                c1.metric(
+                    "Resultado mais provavel ao final",
+                    f"{pdiff[50][-1]:+.2%}",
+                    help="Na metade dos cenarios simulados, a carteira termina o periodo com essa diferenca "
+                         "em relacao ao IBOV. Valor positivo = carteira na frente; negativo = IBOV na frente.",
+                )
+                c2.metric(
+                    "Intervalo de 90% dos cenarios",
+                    f"[{pdiff[5][-1]:+.2%} , {pdiff[95][-1]:+.2%}]",
+                    help="Em 90% dos cenarios simulados, a diferenca final ficou dentro deste intervalo. "
+                         "Quanto mais estreito, mais previsivel e o comportamento da carteira.",
+                )
+                c3.metric(
+                    "Risco de desvio relevante",
+                    f"{proj['prob_divergencia']:.1%}",
+                    help="Probabilidade de a carteira se afastar mais do que o dobro do seu erro historico. "
+                         "Acima de 25% e sinal de atencao — vale revisar o numero de acoes (K) ou "
+                         "a frequencia de ajuste da carteira.",
+                )
 
                 if proj["prob_divergencia"] > 0.25:
-                    st.warning("Probabilidade não-trivial de divergência relevante — considere revisar K ou a frequência de rebalanceamento.")
+                    st.warning(
+                        "Ha uma chance relevante de desvio significativo neste horizonte. "
+                        "Considere aumentar K ou usar rebalanceamento mais frequente no Simulador."
+                    )
                 else:
-                    st.success("Baixa probabilidade de divergência relevante neste horizonte, dado o histórico.")
+                    st.success(
+                        "Risco de desvio dentro do esperado para este horizonte — "
+                        "a carteira tende a acompanhar o IBOV com boa consistencia."
+                    )
 
-                with st.expander("Como interpretar esta projeção"):
+                with st.expander("Como interpretar este grafico?"):
                     st.markdown(
-                        "- Cada simulação reconstrói um futuro hipotético colando blocos de dias "
-                        "**realmente observados** no histórico.\n"
-                        "- Preserva parte da autocorrelação e volatilidade real do mercado.\n"
-                        "- Faixas mais largas em horizontes longos refletem incerteza genuína, não defeito do modelo.\n"
-                        "- Esta projeção **não prevê o futuro** — quantifica a faixa de resultados plausíveis."
+                        "**Linha central (cor laranja):** o cenario mais provavel — o meio da distribuicao "
+                        "de todos os futuros simulados.\n\n"
+                        "**Faixa interna:** metade dos cenarios caiu dentro dessa faixa. "
+                        "Quanto mais estreita, mais previsivel a carteira.\n\n"
+                        "**Faixa externa:** 90% dos cenarios ficaram aqui. "
+                        "Os extremos do grafico representam situacoes raras mas possiveis.\n\n"
+                        "**Linha pontilhada em zero:** linha de referencia. "
+                        "Acima = carteira superou o IBOV; abaixo = IBOV foi melhor.\n\n"
+                        "**Faixas mais largas com o tempo** sao normais — incerteza cresce quanto mais longe "
+                        "voce projeta. Isso nao e um defeito do modelo, e a realidade do mercado."
                     )
 
     # ══════════════════════════════════════════════════════════════════════
     # TAB 4 — MONITORAMENTO E REOTIMIZAÇÃO
     # ══════════════════════════════════════════════════════════════════════
     with tab_monit:
-        st.caption("Regime de mercado, anomalias de tracking error, e verificação de drift da carteira ativa.")
+        st.markdown(
+            "**O que e o Monitoramento?** Depois que uma carteira e montada, ela precisa ser acompanhada "
+            "ao longo do tempo — o mercado muda, e uma carteira que funcionava bem pode comecara desvia "
+            "do IBOV. Esta aba detecta automaticamente sinais de que isso esta acontecendo e avisa quando "
+            "vale a pena revisar a composicao."
+        )
+        st.markdown(
+            "**Usa dados em tempo real?** Nao — esta versao usa uma base historica fixa (ate abril de 2025). "
+            "Em producao real, os dados seriam atualizados diariamente. O que voce ve aqui e a mesma logica "
+            "que seria aplicada com dados ao vivo: regime de mercado, anomalias e drift da carteira."
+        )
+        st.markdown("**Como usar:** rode uma simulacao no **Simulador** e volte aqui para ver o diagnostico.")
+        st.markdown("---")
         resultado = st.session_state.get("ultima_simulacao")
         if resultado is None:
-            st.info("Ajuste parâmetros na aba **Simulador** primeiro.")
+            st.info("Ajuste parametros na aba **Simulador** primeiro.")
         else:
             pesos = resultado["pesos"]
             with st.spinner("Analisando regime e anomalias..."):
@@ -1907,15 +1970,28 @@ if area == "Plataforma":
                 f"<div style='font-size:0.75rem; color:{CINZA}; margin-top:4px'>Regime atual do IBOV</div></div>",
                 unsafe_allow_html=True,
             )
-            c2.metric("Vol. anualizada atual (20d)", f"{diag['vol_atual']:.1f}%" if diag['vol_atual'] is not None else "N/D",
-                       help="Volatilidade anualizada do IBOV nos últimos 20 dias de pregão.")
-            c3.metric("Anomalias de TE no histórico", len(diag["anomalias"]),
-                       help="Dias em que o erro de tracking ficou estatisticamente fora do "
-                            "padrão (|z-score| > 3) em relação à média móvel recente.")
+            c2.metric(
+                "Volatilidade atual do mercado",
+                f"{diag['vol_atual']:.1f}%" if diag['vol_atual'] is not None else "N/D",
+                help="Volatilidade anualizada do IBOV nos ultimos 20 dias. "
+                     "Alta volatilidade significa que o mercado esta oscilando muito — "
+                     "nesses momentos, e mais dificil a carteira acompanhar o IBOV com precisao.",
+            )
+            c3.metric(
+                "Dias com comportamento anomalo",
+                len(diag["anomalias"]),
+                help="Numero de dias em que o erro da carteira em relacao ao IBOV foi "
+                     "estatisticamente fora do padrao — muito acima da media historica. "
+                     "Alguns dias anomalos sao normais; muitos seguidos podem indicar necessidade de ajuste.",
+            )
 
-            titulo_ajuda("Volatilidade do IBOV ao longo do tempo",
-                          "Volatilidade anualizada móvel de 20 dias. A linha pontilhada marca "
-                          "a mediana histórica, usada como referência de regime.", nivel="")
+            titulo_ajuda(
+                "Nivel de oscilacao do mercado ao longo do tempo",
+                "Mostra o quanto o IBOV oscilou em cada periodo. "
+                "A linha pontilhada e a oscilacao media historica — acima dela = mercado agitado, "
+                "abaixo = mercado calmo. O regime atual e classificado com base nessa comparacao.",
+                nivel="",
+            )
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=diag["vol_ibov_20d"].index, y=diag["vol_ibov_20d"].values,
                                       line=dict(color=AZUL, width=1.3), name="Vol. IBOV (20d)"))
@@ -1925,9 +2001,14 @@ if area == "Plataforma":
                                yaxis_title="Vol. anualizada (%)", showlegend=False)
             st.plotly_chart(fig, use_container_width=True, key="monit_fig_vol")
 
-            titulo_ajuda("Tracking error diário e anomalias",
-                          "Erro absoluto diário entre carteira e IBOV. Marcadores em X indicam "
-                          "dias estatisticamente anômalos (|z-score| > 3).", nivel="")
+            titulo_ajuda(
+                "Erro diario da carteira e dias anomalos",
+                "Mostra o quanto a carteira se desviou do IBOV a cada dia. "
+                "Os marcadores em X sao os dias em que esse desvio foi excepcionalmente alto — "
+                "fora do padrao estatistico normal. Alguns sao esperados; muitos concentrados "
+                "num curto periodo podem sinalizar que a carteira precisa ser reajustada.",
+                nivel="",
+            )
             fig2 = go.Figure()
             fig2.add_trace(go.Scatter(x=diag["te_abs"].index, y=diag["te_abs"].values * 100,
                                        line=dict(color=VERDE, width=1.1), name="TE diário absoluto"))
@@ -1943,7 +2024,12 @@ if area == "Plataforma":
             st.plotly_chart(fig2, use_container_width=True, key="monit_fig_te")
 
             st.markdown("<hr>", unsafe_allow_html=True)
-            st.markdown("##### Verificação de drift e reotimização")
+            st.markdown("##### A carteira ainda funciona bem?")
+            st.markdown(
+                "Abaixo comparamos o erro da carteira no periodo de teste original com o erro "
+                "observado nos dados mais recentes disponíveis. Se o erro piorou muito, "
+                "e hora de reotimizar."
+            )
 
             teste_fim_str = resultado["params"]["teste"].split(" a ")[-1]
             try:
@@ -1967,18 +2053,32 @@ if area == "Plataforma":
                     drift_pct = (te_atual - resultado["tracking_error"]) / resultado["tracking_error"] * 100
 
                     cd1, cd2, cd3 = st.columns(3)
-                    cd1.metric("TE no período de teste original", f"{resultado['tracking_error']*100:.4f}%")
-                    cd2.metric("TE observado desde então", f"{te_atual*100:.4f}%")
-                    cd3.metric("Drift", f"{drift_pct:+.1f}%",
-                               help="Variação percentual do TE observado recentemente em relação "
-                                    "ao TE medido no backtest original.")
+                    cd1.metric(
+                        "Erro original (no teste)",
+                        f"{resultado['tracking_error']*100:.4f}%",
+                        help="Tracking Error medido durante o backtest — a precisao da carteira "
+                             "no periodo em que foi avaliada inicialmente.",
+                    )
+                    cd2.metric(
+                        "Erro atual (dados recentes)",
+                        f"{te_atual*100:.4f}%",
+                        help="Tracking Error observado nos dados disponíveis apos o periodo de teste. "
+                             "Se estiver muito maior que o original, a carteira perdeu qualidade.",
+                    )
+                    cd3.metric(
+                        "Variacao do erro",
+                        f"{drift_pct:+.1f}%",
+                        help="Quanto o erro atual e maior ou menor que o original. "
+                             "Ate +25% e aceitavel — acima disso, e recomendavel reotimizar a carteira.",
+                    )
 
                     if drift_pct > 25:
                         st.warning(
-                            "O tracking error real degradou mais de 25% em relação ao esperado — "
-                            "recomenda-se reotimizar a carteira com dados mais recentes."
+                            "O erro da carteira aumentou mais de 25% em relacao ao esperado — "
+                            "isso indica que a composicao atual perdeu precisao. "
+                            "Clique abaixo para reotimizar com os dados mais recentes disponíveis."
                         )
-                        if st.button("Reotimizar agora com dados mais recentes", type="primary", key="monit_reotim"):
+                        if st.button("Reotimizar a carteira agora", type="primary", key="monit_reotim"):
                             with st.spinner("Reotimizando..."):
                                 novo_treino_fim = dados.index.max()
                                 novo_treino_ini = max(
@@ -2012,7 +2112,9 @@ if area == "Plataforma":
                                     f"um novo backtest fora da amostra. Veja na aba **Simulador**."
                                 )
                     else:
-                        st.success("Tracking error dentro do esperado — sem necessidade de reotimização.")
+                        st.success(
+                            "O erro da carteira esta dentro do esperado — nenhuma acao necessaria por enquanto."
+                        )
                 except KeyError:
                     st.info("Algumas ações da carteira não têm dados no período mais recente para medir o drift.")
 
